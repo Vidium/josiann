@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="0c40356b-d72c-4919-b816-8512c8013616" name="Default Changelist" comment="" />
+    <list default="true" id="0c40356b-d72c-4919-b816-8512c8013616" name="Default Changelist" comment="convergence threshold for stopping the search">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sa_noisy.py" beforeDir="false" afterPath="$PROJECT_DIR$/sa_noisy.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -61,11 +65,42 @@
       <option name="presentableId" value="Default" />
       <updated>1627075718327</updated>
       <workItem from="1627075719502" duration="6852000" />
-      <workItem from="1627318201924" duration="20882000" />
+      <workItem from="1627318201924" duration="27962000" />
     </task>
+    <task id="LOCAL-00001" summary="initial version : convergence for non noisy functions">
+      <created>1627388990000</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1627388990000</updated>
+    </task>
+    <task id="LOCAL-00002" summary="convergence threshold for stopping the search">
+      <created>1627391747720</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1627391747720</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State />
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="initial version : convergence for non noisy functions" />
+    <MESSAGE value="convergence threshold for stopping the search" />
+    <option name="LAST_COMMIT_MESSAGE" value="convergence threshold for stopping the search" />
   </component>
 </project>

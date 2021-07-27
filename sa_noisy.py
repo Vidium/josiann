@@ -25,11 +25,12 @@ class Trace:
     Object for storing the trace history of an SA run.
     """
 
-    def __init__(self, nb_iterations: int, nb_repeats: int, ndim: int):
+    def __init__(self, nb_iterations: int, nb_repeats: int, ndim: int, window_size: int):
         """
         :param nb_iterations: number of expected iterations for the SA algorithm.
         :param nb_repeats: number of expected repeats for each iteration.
         :param ndim: number of dimensions of the vector to optimize.
+        :param window_size: size of the window of values to test for convergence.
         """
         self.__position_trace = np.zeros((nb_iterations * nb_repeats + 1, ndim))
         self.__cost_trace = np.zeros(nb_iterations * nb_repeats + 1)
@@ -37,11 +38,9 @@ class Trace:
         self.__nb_repeats_trace = np.zeros(nb_iterations)
         self.__n_trace = np.zeros(nb_iterations)
 
-        self.__best = 0
-        self.__best_iteration = 0
-
         self.__initialized = False
 
+        self.__window_size = window_size
         self.__position_counter = 0
         self.__iteration_counter = 0
 
@@ -91,10 +90,6 @@ class Trace:
         self.__position_trace[self.__position_counter] = position.copy()
         self.__cost_trace[self.__position_counter] = float(cost)
 
-        if cost < self.__cost_trace[self.__best]:
-            self.__best = self.__position_counter
-            self.__best_iteration = self.__iteration_counter
-
         self.__position_counter += 1
 
     def store_iteration(self, temperature: float, nb_repeats: int, n: int) -> None:
@@ -113,22 +108,21 @@ class Trace:
 
         self.__iteration_counter += 1
 
-    def reached_convergence(self, tolerance: float, window_size: int) -> bool:
+    def reached_convergence(self, tolerance: float) -> bool:
         """
         Has the cost trace reached convergence within a tolerance margin ?
 
         :param tolerance: the allowed difference between the last 2 costs.
-        :param window_size: size of the window of values to test for convergence.
 
         :return: Whether the cost trace has converged.
         """
-        if self.__position_counter < window_size:
+        if self.__position_counter < self.__window_size:
             return False
 
-        mean_window = np.mean(self.__cost_trace[self.__position_counter-window_size:self.__position_counter])
+        mean_window = np.mean(self.__cost_trace[self.__position_counter-self.__window_size:self.__position_counter])
         RMSD = np.sqrt(np.sum(
-            (self.__cost_trace[self.__position_counter-window_size:self.__position_counter] - mean_window) ** 2
-        ) / (window_size - 1))
+            (self.__cost_trace[self.__position_counter-self.__window_size:self.__position_counter] - mean_window) ** 2
+        ) / (self.__window_size - 1))
 
         return RMSD < tolerance
 
@@ -155,7 +149,11 @@ class Trace:
 
         :return: the best vector, best cost and iteration number that reached it.
         """
-        return self.__position_trace[self.__best], self.__cost_trace[self.__best], self.__best_iteration
+        _best_index = np.argmin(
+            self.__cost_trace[self.__position_counter - self.__window_size:self.__position_counter]) + \
+            self.__position_counter - self.__window_size
+
+        return self.__position_trace[_best_index], self.__cost_trace[_best_index], _best_index
 
     def get_position_trace(self) -> Tuple[np.ndarray, np.ndarray]:
         """
@@ -230,6 +228,9 @@ class Trace:
 
 @dataclass
 class Result:
+    """
+    Object for storing the results of a run.
+    """
     message: str
     success: bool
     trace: Trace
@@ -257,43 +258,51 @@ def acceptance_probability(current_cost: float, new_cost: float, T: float) -> fl
 
     :return: the probability of acceptance of the new proposed cost.
     """
-    return np.exp((current_cost - new_cost) / T)
+    return (current_cost - new_cost) / T
 
 
 def sa(fun: Callable[[np.ndarray, Any], float],
        x0: np.ndarray,
-       args: Optional[Tuple] = None,
+       args: Optional[Sequence] = None,
        bounds: Optional[Sequence[Tuple[float, float]]] = None,
        moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]] = ((0.8, RandomStep(0.05)),
                                                                            (0.2, RandomStep(0.5))),
        max_iter: int = 200,
        max_repeats: int = 50,
        min_repeats: int = 10,
-       T_max: float = 5.,
+       T_max: float = 1e5,
        alpha: float = 0.9,
        beta: float = 0.1,
-       increase_interval: int = 5,
+       increase_interval: float = 1.0,
        tol: float = 1e-3,
        window_size: int = 100) -> Result:
     """
     Simulated Annealing for minimizing noisy cost functions.
 
-    :param fun:
-    :param x0:
-    :param args:
-    :param bounds:
-    :param moves:
-    :param max_iter:
-    :param max_repeats:
-    :param min_repeats:
-    :param T_max:
-    :param alpha:
-    :param beta:
-    :param increase_interval:
-    :param tol:
+    :param fun: a <n> dimensional (noisy) function to minimize.
+    :param x0: a <n> dimensional vector of initial values.
+    :param args: an optional sequence of arguments to pass to the function to minimize.
+    :param bounds: an optional sequence of bounds (one for each <n> dimensions) with the following format:
+        (lower_bound, upper_bound)
+    :param moves: either
+                    - a single josiann.Move object
+                    - a sequence of josiann.Move objects (all Moves have the same probability of being selected at
+                        each step for proposing a new candidate vector x)
+                    - a sequence of tuples with the following format :
+                        (selection probability, josiann.Move)
+                        In this case, the selection probability dictates the probability of each Move of being
+                        selected at each step.
+    :param max_iter: the maximum number of iterations before stopping the algorithm.
+    :param max_repeats: the maximum number of repeats to perform per iteration.
+    :param min_repeats: the minimum number of repeats to perform per iteration.
+    :param T_max: The initial maximal temperature.
+    :param alpha: The rate of temperature decrease.
+    :param beta: Parameter for modulating the rate of decrease of repeats per iteration.
+    :param increase_interval: the rate of increase of evaluations of the function.
+    :param tol: the convergence tolerance.
     :param window_size: a window of the last <window_size> cost values are used to test for convergence.
 
-    :return:
+    :return: a Result object.
     """
     args = args if args is not None else ()
 
@@ -308,10 +317,10 @@ def sa(fun: Callable[[np.ndarray, Any], float],
 
     # initial state
     x = x0.copy()
-    cost = fun(x, *args)
+    cost = get_mean_cost(fun, x, 1, *args)
 
     # initialize the trace history keeper
-    trace = Trace(max_iter, max_repeats, len(x0))
+    trace = Trace(max_iter, max_repeats, len(x0), window_size=window_size)
     trace.initialize(x, cost)
 
     # run the SA algorithm
@@ -329,14 +338,14 @@ def sa(fun: Callable[[np.ndarray, Any], float],
             proposed_x = move.get_proposal(x)
             proposed_cost = get_mean_cost(fun, proposed_x, n, *args)
 
-            if acceptance_probability(cost, proposed_cost, T) > np.random.random():
+            if acceptance_probability(cost, proposed_cost, T) > np.log(np.random.random()):
                 x, cost = proposed_x, proposed_cost
 
             trace.store_position(x, cost)
 
         trace.store_iteration(T, nb_repeats, n)
 
-        if trace.reached_convergence(tol, window_size=window_size):
+        if trace.reached_convergence(tol):
             message = 'Convergence tolerance reached.'
             break
 
