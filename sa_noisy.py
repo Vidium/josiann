@@ -113,19 +113,24 @@ class Trace:
 
         self.__iteration_counter += 1
 
-    def reached_convergence(self, tolerance: float) -> bool:
+    def reached_convergence(self, tolerance: float, window_size: int) -> bool:
         """
         Has the cost trace reached convergence within a tolerance margin ?
 
         :param tolerance: the allowed difference between the last 2 costs.
+        :param window_size: size of the window of values to test for convergence.
 
         :return: Whether the cost trace has converged.
         """
-        if self.__iteration_counter < 2:
+        if self.__position_counter < window_size:
             return False
 
-        return abs(self.__cost_trace[self.__iteration_counter - 2] - self.__cost_trace[self.__iteration_counter - 1]) \
-            <= tolerance
+        mean_window = np.mean(self.__cost_trace[self.__position_counter-window_size:self.__position_counter])
+        RMSD = np.sqrt(np.sum(
+            (self.__cost_trace[self.__position_counter-window_size:self.__position_counter] - mean_window) ** 2
+        ) / (window_size - 1))
+
+        return RMSD < tolerance
 
     @property
     def ndim(self) -> int:
@@ -151,6 +156,22 @@ class Trace:
         :return: the best vector, best cost and iteration number that reached it.
         """
         return self.__position_trace[self.__best], self.__cost_trace[self.__best], self.__best_iteration
+
+    def get_position_trace(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Get traces for vector and cost values along iterations.
+
+        :return: Traces for vector and cost values along iterations.
+        """
+        return self.__position_trace, self.__cost_trace
+
+    def get_parameters_trace(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Get traces related to parameters values along iterations.
+
+        :return: Traces related to parameters values along iterations.
+        """
+        return self.__temperature_trace, self.__nb_repeats_trace, self.__n_trace
 
     def plot_positions(self, true_values: Optional[Sequence[float]] = None) -> None:
         """
@@ -251,8 +272,9 @@ def sa(fun: Callable[[np.ndarray, Any], float],
        T_max: float = 5.,
        alpha: float = 0.9,
        beta: float = 0.1,
-       decrease_interval: int = 5,
-       tol: float = 1e-3) -> Result:
+       increase_interval: int = 5,
+       tol: float = 1e-3,
+       window_size: int = 100) -> Result:
     """
     Simulated Annealing for minimizing noisy cost functions.
 
@@ -263,10 +285,13 @@ def sa(fun: Callable[[np.ndarray, Any], float],
     :param moves:
     :param max_iter:
     :param max_repeats:
+    :param min_repeats:
     :param T_max:
     :param alpha:
-    :param decrease_interval:
+    :param beta:
+    :param increase_interval:
     :param tol:
+    :param window_size: a window of the last <window_size> cost values are used to test for convergence.
 
     :return:
     """
@@ -293,11 +318,8 @@ def sa(fun: Callable[[np.ndarray, Any], float],
     for iteration in tqdm(range(max_iter), unit='iteration'):
 
         T = T_max * alpha ** iteration
-        # nb_repeats = int(np.ceil(max_repeats / T_max * T))
         nb_repeats = int(np.floor((max_repeats - min_repeats) * alpha ** (iteration * beta) + min_repeats))
-
-        # nb_repeats = max_repeats
-        n = max(int(np.floor(iteration ** 2 / decrease_interval)), 1)
+        n = max(int(np.floor(iteration ** 2 / increase_interval)), 1)
 
         for repeat in range(nb_repeats):
             # pick a move at random from available moves
@@ -314,9 +336,9 @@ def sa(fun: Callable[[np.ndarray, Any], float],
 
         trace.store_iteration(T, nb_repeats, n)
 
-        # if trace.reached_convergence(tol):
-        #     message = 'Convergence tolerance reached.'
-        #     break
+        if trace.reached_convergence(tol, window_size=window_size):
+            message = 'Convergence tolerance reached.'
+            break
 
     else:
         message = 'Requested number of iterations reached.'
