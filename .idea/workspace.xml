@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="0c40356b-d72c-4919-b816-8512c8013616" name="Default Changelist" comment="convergence threshold for stopping the search">
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/josiann.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sa_noisy.py" beforeDir="false" afterPath="$PROJECT_DIR$/sa_noisy.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
@@ -11,43 +16,23 @@
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
-  <component name="FileTemplateManagerImpl">
-    <option name="RECENT_TEMPLATES">
-      <list>
-        <option value="Python Script" />
-      </list>
-    </option>
-  </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/name_utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../real/real/core/gpu/beta_MCMC.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../real/real/core/gpu/compute_beta_gpu.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/real/scratch/beta_brute_force.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$USER_HOME$/anaconda3/envs/pyREAL/lib/python3.7/site-packages/frigidum/annealing.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="notebook:///home/matteo/git/josiann/test/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$USER_HOME$/anaconda3/envs/pyREAL/lib/python3.7/site-packages/scipy/optimize/_basinhopping.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/real/scratch/simu_refactoring.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../real/real/core/gpu/simulation.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/real/scratch/MCMC.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../real/real/cuda/simulation.cu" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/__init__.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/sa_noisy.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/moves.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../real/real/core/gpu/ModelCupy.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$USER_HOME$/anaconda3/envs/pyREAL/lib/python3.7/site-packages/plotly/graph_objs/_scatter.py" root0="FORCE_HIGHLIGHTING" />
   </component>
-  <component name="ProjectId" id="1vjVvri28wbBSwu1etVdMs1bI5R" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectId" id="1vwiAwmzXj4uzoApDrrgHCeeiSP" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
     <option name="showMembers" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
@@ -56,32 +41,40 @@
   <component name="ReaderModeSettings">
     <option name="enabled" value="false" />
   </component>
+  <component name="RunManager">
+    <configuration default="true" type="PythonConfigurationType" factoryName="Python">
+      <module name="josiann" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="Default task">
-      <changelist id="0c40356b-d72c-4919-b816-8512c8013616" name="Default Changelist" comment="" />
-      <created>1627075718327</created>
+      <changelist id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="" />
+      <created>1627479411111</created>
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
-      <updated>1627075718327</updated>
-      <workItem from="1627075719502" duration="6852000" />
-      <workItem from="1627318201924" duration="27962000" />
+      <updated>1627479411111</updated>
+      <workItem from="1627479412248" duration="10320000" />
     </task>
-    <task id="LOCAL-00001" summary="initial version : convergence for non noisy functions">
-      <created>1627388990000</created>
-      <option name="number" value="00001" />
-      <option name="presentableId" value="LOCAL-00001" />
-      <option name="project" value="LOCAL" />
-      <updated>1627388990000</updated>
-    </task>
-    <task id="LOCAL-00002" summary="convergence threshold for stopping the search">
-      <created>1627391747720</created>
-      <option name="number" value="00002" />
-      <option name="presentableId" value="LOCAL-00002" />
-      <option name="project" value="LOCAL" />
-      <updated>1627391747720</updated>
-    </task>
-    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -99,8 +92,6 @@
     </option>
   </component>
   <component name="VcsManagerConfiguration">
-    <MESSAGE value="initial version : convergence for non noisy functions" />
-    <MESSAGE value="convergence threshold for stopping the search" />
-    <option name="LAST_COMMIT_MESSAGE" value="convergence threshold for stopping the search" />
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
   </component>
 </project>
