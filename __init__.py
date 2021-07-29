@@ -9,10 +9,12 @@ This package provides an implementation of the simulated annealing method for mi
 
 # ====================================================
 # imports
-from .sa_noisy import sa
-from .moves import Move, RandomStep, Metropolis
+from .single import sa, SingleMove, RandomStep, Metropolis
+from .ensemble import ensemble_sa, EnsembleMove, Stretch
 
 # ====================================================
 # code
 __all__ = ['sa',
-           'Move', 'RandomStep', 'Metropolis']
+           'SingleMove', 'RandomStep', 'Metropolis',
+           'ensemble_sa',
+           'EnsembleMove', 'Stretch']
