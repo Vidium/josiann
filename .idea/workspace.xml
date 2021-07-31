@@ -2,19 +2,16 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="logic update from Toth et al 2020">
-      <change afterPath="$PROJECT_DIR$/.idea/rGraphicsSettings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.idea/rSettings.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/__moves.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/__sa.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ensemble/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ensemble/moves.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/ensemble/sa.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/single/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/single/moves.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/test/test_stretch_move.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/moves.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/sa_noisy.py" beforeDir="false" afterPath="$PROJECT_DIR$/single/sa.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/__moves.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/__sa.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ensemble/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ensemble/moves.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ensemble/sa.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/single/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/single/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/moves.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/single/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/sa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
@@ -32,6 +29,11 @@
     </option>
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="b4e1e4ddb01f36d7eb74e077cb38ceb4d422c6dc" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
@@ -59,6 +61,7 @@
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/single" />
       <recent name="$PROJECT_DIR$/ensemble" />
     </key>
@@ -96,6 +99,7 @@
       <option name="presentableId" value="Default" />
       <updated>1627479411111</updated>
       <workItem from="1627479412248" duration="29627000" />
+      <workItem from="1627655765717" duration="8763000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -120,6 +124,7 @@
         </entry>
       </map>
     </option>
+    <option name="oldMeFiltersMigrated" value="true" />
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />

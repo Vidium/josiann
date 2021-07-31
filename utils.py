@@ -4,6 +4,7 @@
 
 # ====================================================
 # imports
+import numbers
 import warnings
 import collections
 import numpy as np
@@ -12,10 +13,9 @@ from dataclasses import dataclass, field
 from plotly.subplots import make_subplots
 
 from typing import Union, Sequence, Tuple, List, Callable, Any, Optional
-from typing_extensions import Literal
 
 from .name_utils import ShapeError
-from .__moves import Move
+from .moves import Move, EnsembleMove
 
 
 # ====================================================
@@ -34,12 +34,12 @@ class Trace:
         :param shape: shape of the matrices to store (nb_walkers, d).
         :param window_size: size of the window of values to test for convergence.
         """
-        self.__position_trace = np.zeros((nb_iterations, shape[0], shape[1]))
-        self.__cost_trace = np.zeros(nb_iterations, shape[0])
-        self.__temperature_trace = np.zeros(nb_iterations)
-        self.__n_trace = np.zeros(nb_iterations)
-        self.__sigma_trace = np.zeros(nb_iterations)
-        self.__accepted = np.zeros((nb_iterations, shape[0]), dtype=bool)
+        self.__position_trace = np.zeros((nb_iterations, shape[0], shape[1]), dtype=np.float32)
+        self.__cost_trace = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
+        self.__temperature_trace = np.zeros(nb_iterations, dtype=np.float32)
+        self.__n_trace = np.zeros(nb_iterations, dtype=np.int16)
+        self.__sigma_trace = np.zeros(nb_iterations, dtype=np.float32)
+        self.__accepted = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
 
         self.__initialized = False
 
@@ -58,8 +58,8 @@ class Trace:
         """
         self.__initialized = True
 
-        np.insert(self.__position_trace, 0, position.copy())
-        np.insert(self.__cost_trace, 0, np.array(costs))
+        self.__position_trace = np.concatenate((np.array([position.copy()]), self.__position_trace))
+        self.__cost_trace = np.concatenate((np.array([costs]), self.__cost_trace))
 
     def finalize(self) -> None:
         """
@@ -70,15 +70,6 @@ class Trace:
         self.__temperature_trace = self.__temperature_trace[:self.__iteration_counter]
         self.__n_trace = self.__n_trace[:self.__iteration_counter]
         self.__sigma_trace = self.__sigma_trace[:self.__iteration_counter]
-
-    def __check_initialized(self) -> None:
-        """
-        Check this Trace has been correctly initialized.
-        """
-        if not self.__initialized:
-            warnings.warn('Trace was not initialized, skipping initial state.', RuntimeWarning)
-
-            self.__initialized = True
 
     def store(self,
               position: np.ndarray,
@@ -98,10 +89,8 @@ class Trace:
         :param _sigma: the current estimated standard deviation.
         :param accepted: were the current propositions accepted ?
         """
-        self.__check_initialized()
-
-        self.__position_trace[self.__iteration_counter] = position.copy()
-        self.__cost_trace[self.__iteration_counter] = np.array(costs)
+        self.__position_trace[self.__iteration_counter + 1 * self.__initialized] = position.copy()
+        self.__cost_trace[self.__iteration_counter + 1 * self.__initialized] = np.array(costs)
         self.__temperature_trace[self.__iteration_counter] = float(temperature)
         self.__n_trace[self.__iteration_counter] = int(_n)
         self.__sigma_trace[self.__iteration_counter] = float(_sigma)
@@ -114,13 +103,10 @@ class Trace:
         """
         Has the cost trace reached convergence within a tolerance margin ?
 
-        :param tolerance: the allowed difference between the last 2 costs.
+        :param tolerance: the allowed root mean square deviation.
 
         :return: Whether the cost trace has converged.
         """
-        # TODO : redo with parallel workers
-        return False
-
         if self.__iteration_counter < self.__window_size:
             return False
 
@@ -139,9 +125,9 @@ class Trace:
         :return: The proportion of accepted proposition in the last <window_size> propositions.
         """
         if self.__iteration_counter < self.__window_size:
-            return np.nan
+            return [np.nan for _ in range(self.nb_walkers)]
 
-        return [np.sum(self.__accepted[w, self.__iteration_counter - self.__window_size:self.__iteration_counter]) /
+        return [np.sum(self.__accepted[self.__iteration_counter - self.__window_size:self.__iteration_counter, w]) /
                 self.__window_size for w in range(self.nb_walkers)]
 
     @property
@@ -170,16 +156,17 @@ class Trace:
     def nb_iterations(self) -> int:
         return self.__cost_trace.shape[0]
 
-    def get_best(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_best(self) -> Tuple[np.ndarray, np.ndarray, List[int]]:
         """
         Get the best vector with associated cost and iteration at which it was reached.
 
         :return: the best vector, best cost and iteration number that reached it.
         """
-        _best_index = np.argmin(
-            self.__cost_trace[max(0, self.__iteration_counter - self.__window_size):self.__iteration_counter], axis=1)
+        lookup_array = self.__cost_trace[max(0, self.__iteration_counter - self.__window_size):self.__iteration_counter]
 
-        _best_index[0] += self.__iteration_counter - self.__window_size
+        _best_index = list(np.unravel_index(np.argmin(lookup_array), lookup_array.shape))
+
+        _best_index[0] += max(0, self.__iteration_counter - self.__window_size)
 
         return self.__position_trace[_best_index[0], _best_index[1]], \
             self.__cost_trace[_best_index[0], _best_index[1]], \
@@ -210,28 +197,51 @@ class Trace:
         if true_values is not None and len(true_values) != self.ndim:
             raise ShapeError(f'The vector of true values should have {self.ndim} dimensions, not {len(true_values)}.')
 
-        fig = make_subplots(rows=self.ndim + 1, cols=1, shared_xaxes=True)
+        fig = make_subplots(rows=self.ndim + 1, cols=1, shared_xaxes=True,
+                            subplot_titles=("Costs", *(f'Dimension {i}' for i in range(self.ndim))),
+                            vertical_spacing=0.05)
 
         for w in range(self.nb_walkers):
             fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
                                      y=self.__cost_trace[:, w],
                                      name=f'costs[{w}]',
                                      marker=dict(color='rgba(0, 0, 200, 0.3)'),
-                                     hovertext=self.__cost_trace), row=1, col=1)
+                                     hovertext=self.__cost_trace,
+                                     showlegend=False), row=1, col=1)
 
         for i in range(self.ndim):
             for w in range(self.nb_walkers):
                 fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
                                          y=self.__position_trace[:, w, i],
                                          marker=dict(color='rgba(0, 0, 0, 0.3)'),
-                                         name=f'Dimension[{w}] #{i}'), row=i + 2, col=1)
+                                         name=f'Walker #{w}',
+                                         showlegend=False), row=i + 2, col=1)
 
             if true_values is not None:
                 fig.add_trace(go.Scatter(x=[0, self.nb_positions],
                                          y=[true_values[i], true_values[i]],
                                          mode='lines',
                                          marker=dict(color='rgba(200, 0, 0, 1)'),
+                                         name=f'True value',
                                          showlegend=False), row=i + 2, col=1)
+
+                fig.add_annotation(
+                    x=len(self.__position_trace),
+                    y=np.max(self.__position_trace[:, :, i]),
+                    xref=f"x{i+2}",
+                    yref=f"y{i+2}",
+                    text=f"True value : {true_values[i]}",
+                    showarrow=False,
+                    borderwidth=0,
+                    borderpad=4,
+                    bgcolor="#eb9a9a",
+                    opacity=0.8
+                )
+
+        for i in range(self.ndim + 1):
+            fig.layout.annotations[i].update(x=0.025, xanchor='left')
+
+        fig['layout'].update(height=200*(self.ndim + 1), width=600, margin=dict(t=40, b=10, l=10, r=10))
 
         fig.show()
 
@@ -239,22 +249,27 @@ class Trace:
         """
         Plot temperature, number of repeats per iteration and number of averaged function evaluations along iterations.
         """
-        fig = make_subplots(rows=4, cols=1, shared_xaxes=True)
+        fig = make_subplots(rows=4, cols=1, shared_xaxes=True,
+                            subplot_titles=("Temperature", "Sigma", "n", "Acceptance fraction (%)"),
+                            vertical_spacing=0.05)
 
         fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
                                  y=self.__temperature_trace,
                                  name='T',
-                                 hovertext=self.__temperature_trace), row=1, col=1)
+                                 hovertext=self.__temperature_trace,
+                                 showlegend=False), row=1, col=1)
 
         fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
                                  y=self.__sigma_trace,
                                  name='sigma',
-                                 hovertext=self.__sigma_trace), row=2, col=1)
+                                 hovertext=self.__sigma_trace,
+                                 showlegend=False), row=2, col=1)
 
         fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
                                  y=self.__n_trace,
                                  name='n',
-                                 hovertext=self.__n_trace), row=3, col=1)
+                                 hovertext=self.__n_trace,
+                                 showlegend=False), row=3, col=1)
 
         for w in range(self.nb_walkers):
             accepted_proportion = np.concatenate((np.array([np.nan for _ in range(self.__window_size)]),
@@ -266,7 +281,14 @@ class Trace:
                                      y=accepted_proportion,
                                      name=f'% accepted[{w}]',
                                      marker=dict(color='rgba(0, 0, 200, 0.3)'),
-                                     hovertext=accepted_proportion), row=4, col=1)
+                                     hovertext=accepted_proportion,
+                                     showlegend=False), row=4, col=1)
+
+        fig.update_layout(yaxis4=dict(range=[0, 100]), height=150 * (self.ndim + 1), width=600,
+                          margin=dict(t=40, b=10, l=10, r=10))
+
+        for i in range(4):
+            fig.layout.annotations[i].update(x=0.025, xanchor='left')
 
         fig.show()
 
@@ -293,7 +315,7 @@ class Result:
     computed_T_0: bool
     x: np.ndarray = field(init=False)
     x_cost: float = field(init=False)
-    x_iter: int = field(init=False)
+    x_iter: List[int] = field(init=False)
 
     def __post_init__(self):
         self.x, self.x_cost, self.x_iter = self.trace.get_best()
@@ -317,40 +339,48 @@ class Result:
                f"\talpha : {self.alpha}\n" \
                f"\tT_final : {self.T_final}\n" \
                f"Success : {self.success}\n" \
-               f"Lowest cost : {self.x_cost} (reached at iteration {self.x_iter})\n" \
+               f"Lowest cost : {self.x_cost} (reached at iteration {self.x_iter[0]} by walker #{self.x_iter[1]})\n" \
                f"x: {self.x}"
 
 
 def parse_moves(moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]],
-                mtype: Literal['SingleMove', 'EnsembleMove']) -> Tuple[List[float], List[Move]]:
+                nb_walkers: int) -> Tuple[List[float], List[Move]]:
     """
     Parse moves given by the user to obtain a list of moves and associated probabilities of drawing those moves.
 
     :param moves: a single Move object, a sequence of Moves (uniform probabilities are assumed on all Moves) or a
         sequence of tuples with format (probability: float, Move).
-    :param mtype: the type of moves that are accepted (either 'SingleMove' or 'EnsembleMove').
+    :param nb_walkers: the number of parallel walkers in the ensemble.
 
     :return: the list of probabilities and the list of associated moves.
     """
     if not isinstance(moves, collections.Sequence) or isinstance(moves, str):
-        if isinstance(moves, Move) and moves.__class__.__name__ == mtype:
+        if isinstance(moves, Move):
+            if issubclass(type(moves), EnsembleMove) and nb_walkers < 2:
+                raise ValueError('Ensemble moves require at least 2 walkers to be used.')
+
             return [1.0], [moves]
 
         raise ValueError(f"Invalid object '{moves}' of type '{type(moves)}' for defining moves, expected a "
-                         f"'{mtype}', a sequence of '{mtype}' or a sequence of tuples "
-                         f"'(probability: float, '{mtype}')'.")
+                         f"'Move', a sequence of 'Move's or a sequence of tuples "
+                         f"'(probability: float, 'Move')'.")
 
     parsed_probabilities = []
     parsed_moves = []
 
     for move in moves:
-        if isinstance(move, Move) and moves.__class__.__name__ == mtype:
+        if isinstance(move, Move):
+            if issubclass(type(move), EnsembleMove) and nb_walkers < 2:
+                raise ValueError('Ensemble moves require at least 2 walkers to be used.')
+
             parsed_probabilities.append(1.0)
             parsed_moves.append(move)
 
         elif isinstance(move, tuple):
-            if len(move) == 2 and isinstance(move[0], float) and isinstance(move[1], Move) \
-                    and moves.__class__.__name__ == mtype:
+            if len(move) == 2 and isinstance(move[0], float) and isinstance(move[1], Move):
+                if issubclass(type(move[1]), EnsembleMove) and nb_walkers < 2:
+                    raise ValueError('Ensemble moves require at least 2 walkers to be used.')
+
                 parsed_probabilities.append(move[0])
                 parsed_moves.append(move[1])
 
@@ -359,13 +389,128 @@ def parse_moves(moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]]
 
         else:
             raise ValueError(f"Invalid object '{move}' of type '{type(move)}' encountered in the sequence of moves for "
-                             f"defining a move, expected a '{mtype}' or tuple '(probability: float, '{mtype}')'.")
+                             f"defining a move, expected a 'Move' or tuple '(probability: float, 'Move')'.")
 
     if sum(parsed_probabilities) != 1:
         _sum = sum(parsed_probabilities)
         parsed_probabilities = [proba / _sum for proba in parsed_probabilities]
 
     return parsed_probabilities, parsed_moves
+
+
+def get_delta_max() -> float:
+    """TODO"""
+    raise NotImplementedError
+
+
+def check_parameters(args: Optional[Sequence],
+                     x0: np.ndarray,
+                     nb_walkers: int,
+                     max_iter: int,
+                     max_measures: int,
+                     final_acceptance_probability: float,
+                     epsilon: float,
+                     T_0: Optional[float],
+                     tol: float,
+                     window_size: int,
+                     bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]]) -> Tuple[
+    Tuple, np.ndarray, int, int, float, float, float, float, int, bool
+]:
+    """
+    Check validity of parameters.
+
+    :param args: an optional sequence of arguments to pass to the function to minimize.
+    :param x0: a <d> dimensional vector of initial values.
+    :param nb_walkers: the number of parallel walkers in the ensemble.
+    :param max_iter: the maximum number of iterations before stopping the algorithm.
+    :param max_measures: the maximum number of function evaluations to average per step.
+    :param final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+    :param epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
+        steeper descent profiles)
+    :param T_0: optional initial temperature value.
+    :param tol: the convergence tolerance.
+    :param window_size: a window of the last <window_size> cost values are used to test for convergence.
+    :param bounds: an optional sequence of bounds (one for each <n> dimensions) with the following format:
+        (lower_bound, upper_bound)
+        or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
+
+    :return: Valid parameters.
+    """
+    args = args if args is not None else ()
+
+    if x0.ndim == 1:
+        x0 = np.array([x0 for _ in range(nb_walkers)])
+
+    if x0.shape[0] != nb_walkers:
+        raise ShapeError(f'Matrix of initial values should have {nb_walkers} rows (equal to the number of '
+                         f'parallel walkers), not {x0.shape[0]}')
+
+    if bounds is not None:
+        if isinstance(bounds, tuple) and isinstance(bounds[0], numbers.Number) and isinstance(bounds[1], numbers.Number):
+            if np.any(x0 < bounds[0]) or np.any(x0 > bounds[1]):
+                raise ValueError('Some values in x0 do not lie in between defined bounds.')
+
+        elif isinstance(bounds, collections.Sequence):
+            if len(bounds) != x0.shape[1]:
+                raise ShapeError(f'Bounds must be defined for all dimensions, but only {len(bounds)} out of'
+                                 f' {x0.shape[1]} were defined.')
+
+            for dim_index, bound in enumerate(bounds):
+                if isinstance(bound, tuple) and isinstance(bound[0], numbers.Number) and isinstance(bound[1],
+                                                                                                    numbers.Number):
+                    if np.any(x0[:, dim_index] < bound[0]) or np.any(x0[:, dim_index] > bound[1]):
+                        raise ValueError(f'Some values in x0 do not lie in between defined bounds for dimensions '
+                                         f'{dim_index}.')
+
+                else:
+                    raise TypeError(
+                        f"'bounds' parameter must be an optional sequence of bounds (one for each <n> dimensions) "
+                        f"with the following format: \n"
+                        f"\t(lower_bound, upper_bound)\n "
+                        f"or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.")
+
+        else:
+            raise TypeError(f"'bounds' parameter must be an optional sequence of bounds (one for each <n> dimensions) "
+                            f"with the following format: \n"
+                            f"\t(lower_bound, upper_bound)\n "
+                            f"or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.")
+
+    if max_iter < 0:
+        raise ValueError("'max_iter' parameter must be positive.")
+    else:
+        max_iter = int(max_iter)
+
+    if max_measures < 0:
+        raise ValueError("'max_measures' parameter must be positive.")
+    else:
+        max_measures = int(max_measures)
+
+    if final_acceptance_probability < 0 or final_acceptance_probability > 1:
+        raise ValueError(f"Invalid value '{final_acceptance_probability}' for 'final_acceptance_probability', "
+                         f"should be in [0, 1].")
+
+    if epsilon <= 0 or epsilon >= 1:
+        raise ValueError(f"Invalid value '{epsilon}' for 'epsilon', should be in (0, 1).")
+
+    if T_0 is not None and T_0 < 0:
+        raise ValueError("'T_0' parameter must be at least 0.")
+
+    if T_0 is None:
+        T_0 = -get_delta_max() / np.log(0.8)
+        computed_T_0 = True
+    else:
+        T_0 = float(T_0)
+        computed_T_0 = False
+
+    if tol <= 0:
+        raise ValueError("'tol' parameter must be strictly positive.")
+
+    if window_size < 1:
+        raise ValueError("'window_size' parameter must be greater than 0.")
+    else:
+        window_size = int(window_size)
+
+    return args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, window_size, computed_T_0
 
 
 def get_mean_cost(fun: Callable[[np.ndarray, Any], float],
@@ -383,9 +528,9 @@ def get_mean_cost(fun: Callable[[np.ndarray, Any], float],
     return float(np.mean([fun(x, *args) for _ in range(_n)]))
 
 
-def acceptance_probability(current_cost: float,
-                           new_cost: float,
-                           _T: float) -> float:
+def acceptance_log_probability(current_cost: float,
+                               new_cost: float,
+                               _T: float) -> float:
     """
     Compute the acceptance probability for a new proposed cost, given the current cost and a temperature.
 
