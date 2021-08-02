@@ -1,17 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="logic update from Toth et al 2020">
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="ensemble moves implemented">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__moves.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/__sa.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ensemble/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ensemble/moves.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/ensemble/sa.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/single/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/single/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/moves.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/single/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/sa.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/moves.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/sa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
@@ -99,7 +93,7 @@
       <option name="presentableId" value="Default" />
       <updated>1627479411111</updated>
       <workItem from="1627479412248" duration="29627000" />
-      <workItem from="1627655765717" duration="8763000" />
+      <workItem from="1627655765717" duration="20280000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -108,7 +102,14 @@
       <option name="project" value="LOCAL" />
       <updated>1627491569795</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="ensemble moves implemented">
+      <created>1627734164056</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1627734164056</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -129,6 +130,7 @@
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
     <MESSAGE value="logic update from Toth et al 2020" />
-    <option name="LAST_COMMIT_MESSAGE" value="logic update from Toth et al 2020" />
+    <MESSAGE value="ensemble moves implemented" />
+    <option name="LAST_COMMIT_MESSAGE" value="ensemble moves implemented" />
   </component>
 </project>

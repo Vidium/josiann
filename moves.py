@@ -4,26 +4,30 @@
 
 # ====================================================
 # imports
+import collections
 import numpy as np
 from abc import ABC, abstractmethod
 
-from typing import Optional, Sequence, Tuple, List, Union
+from typing import Optional, Sequence, Tuple, Union, List
+
+from .utils import State
 
 
 # ====================================================
 # code
 class Move(ABC):
     """
-    Base abstract class for
+    Base abstract class for defining how positions evolve in the SA algorithm.
+
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, bounds: Optional[Sequence[Tuple[float, float]]] = None):
-        """
-        :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
-        """
+    def __init__(self,
+                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
         self.__bounds = np.array(bounds) if bounds is not None else None
 
-    def set_bounds(self, bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]]) -> None:
+    def set_bounds(self,
+                   bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]]) -> None:
         """
         Set bounds for the Move.
 
@@ -32,7 +36,22 @@ class Move(ABC):
         """
         self.__bounds = np.array(bounds) if bounds is not None else None
 
-    def _valid_proposal(self, x: np.ndarray) -> np.ndarray:
+    @abstractmethod
+    def get_proposal(self,
+                     x: np.ndarray,
+                     state: State) -> np.ndarray:
+        """
+        Generate a new proposed vector x.
+
+        :param x: current vector x of shape (ndim,)
+        :param state: current state of the SA algorithm.
+
+        :return: new proposed vector x of shape (ndim,)
+        """
+        pass
+
+    def _valid_proposal(self,
+                        x: np.ndarray) -> np.ndarray:
         """
         Get valid proposal within defined bounds.
 
@@ -46,63 +65,95 @@ class Move(ABC):
 
 
 # Moves independent from other walkers
-class SingleMove(Move, ABC):
-
-    @abstractmethod
-    def get_proposal(self, x: np.ndarray, *args, **kwargs) -> np.ndarray:
-        """
-        Generate a new proposed vector x.
-
-        :param x: current vector x of shape (ndim,)
-
-        :return: new proposed vector x of shape (ndim,)
-        """
-        pass
-
-
-class RandomStep(SingleMove):
+class RandomStep(Move):
     """
     Simple random step within a radius of (-0.5 * magnitude) to (+0.5 * magnitude) around x.
+
+    :param magnitude: size of the random step is (-0.5 * magnitude) to (+0.5 * magnitude)
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, magnitude: float, bounds: Optional[Sequence[Tuple[float, float]]] = None):
-        """
-        :param magnitude: size of the random step is (-0.5 * magnitude) to (+0.5 * magnitude)
-        :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
-        """
+    def __init__(self,
+                 magnitude: float,
+                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
         self.__magnitude = magnitude
 
-    def get_proposal(self, x: np.ndarray, *args, **kwargs) -> np.ndarray:
+    def get_proposal(self,
+                     x: np.ndarray,
+                     state: State) -> np.ndarray:
         """
         Generate a new proposed vector x.
 
         :param x: current vector x of shape (ndim,)
+        :param state: current state of the SA algorithm.
 
         :return: new proposed vector x of shape (ndim,)
         """
         return self._valid_proposal(x + self.__magnitude * (np.random.random(len(x)) - 0.5))
 
 
-class Metropolis(SingleMove):
+class SetStep(Move):
     """
-    Metropolis step obtained from a multivariate normal distribution with mean <x> and covariance matrix <variances>
+    Step within a fixed set of possible values for x. For each dimension, the position immediately before or after x
+        will be chosen at random when stepping.
+
+    :param position_set: set of only possible values for x in each dimension.
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, variances: np.ndarray, bounds: Optional[Sequence[Tuple[float, float]]] = None):
-        """
-        :param variances: list of variances between dimensions, which will be set as the diagonal of the covariance
-            matrix.
-        :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
-        """
+    def __init__(self,
+                 position_set: Sequence[float],
+                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
-        self.__cov = np.diag(variances)
+        self.__position_set = np.sort(position_set)
+        self.__reversed_position_set = self.__position_set[::-1]
 
-    def get_proposal(self, x: np.ndarray, *args, **kwargs) -> np.ndarray:
+    def get_proposal(self,
+                     x: np.ndarray,
+                     state: State) -> np.ndarray:
         """
         Generate a new proposed vector x.
 
         :param x: current vector x of shape (ndim,)
+        :param state: current state of the SA algorithm.
+
+        :return: new proposed vector x of shape (ndim,)
+        """
+        new_x = np.zeros(len(x))
+
+        for ndim in range(len(x)):
+            if np.random.rand() > 0.5:
+                new_x[ndim] = self.__position_set[np.argmax(self.__position_set > x[ndim])]
+
+            else:
+                new_x[ndim] = self.__reversed_position_set[np.argmax(self.__reversed_position_set < x[ndim])]
+
+        return self._valid_proposal(new_x)
+
+
+class Metropolis(Move):
+    """
+    Metropolis step obtained from a multivariate normal distribution with mean <x> and covariance matrix <variances>
+
+    :param variances: list of variances between dimensions, which will be set as the diagonal of the covariance
+        matrix.
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    """
+
+    def __init__(self,
+                 variances: np.ndarray, bounds: Optional[Sequence[Tuple[float, float]]] = None):
+        super().__init__(bounds=bounds)
+        self.__cov = np.diag(variances)
+
+    def get_proposal(self,
+                     x: np.ndarray,
+                     state: State) -> np.ndarray:
+        """
+        Generate a new proposed vector x.
+
+        :param x: current vector x of shape (ndim,)
+        :param state: current state of the SA algorithm.
 
         :return: new proposed vector x of shape (ndim,)
         """
@@ -111,38 +162,23 @@ class Metropolis(SingleMove):
 
 # Moves depending on other walkers
 class EnsembleMove(Move, ABC):
-
-    @abstractmethod
-    def get_proposal(self,
-                     x: np.ndarray,
-                     c: List[np.ndarray],
-                     iteration: int,
-                     max_iter: int,
-                     *args, **kwargs) -> np.ndarray:
-        """
-        Generate a new proposed vector x.
-
-        :param x: current vector x of shape (ndim,)
-        :param c: set of complementary vectors x_[k] of shape (nb_walkers, ndim)
-        :param iteration: current iteration number.
-        :param max_iter: maximum iteration number.
-
-        :return: new proposed vector x of shape (ndim,)
-        """
-        pass
+    """
+    Base class for building moves that require an ensemble of walkers to evolve in parallel.
+    """
 
 
 class Stretch(EnsembleMove):
     """
     Stretch move as defined in 'Goodman, J., Weare, J., 2010, Comm. App. Math. and Comp. Sci., 5, 65'
+
+    :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
+        while bigger values make samples more spread out with a peak getting closer to 0.
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, a: float = 2., bounds: Optional[Sequence[Tuple[float, float]]] = None):
-        """
-        :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
-            while bigger values make samples more spread out with a peak getting closer to 0.
-        :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
-        """
+    def __init__(self,
+                 a: float = 2.,
+                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
         self._a = a
 
@@ -161,22 +197,17 @@ class Stretch(EnsembleMove):
 
     def get_proposal(self,
                      x: np.ndarray,
-                     c: List[np.ndarray],
-                     iteration: int,
-                     max_iter: int,
-                     *args, **kwargs) -> np.ndarray:
+                     state: State) -> np.ndarray:
         """
         Generate a new proposed vector x.
 
         :param x: current vector x of shape (ndim,)
-        :param c: set of complementary vectors x_[k] of shape (nb_walkers-1, ndim)
-        :param iteration: current iteration number.
-        :param max_iter: maximum iteration number.
+        :param state: current state of the SA algorithm.
 
         :return: new proposed vector x of shape (ndim,)
         """
         # pick X_j at random from the complementary set
-        x_j = c[np.random.randint(0, len(c))]
+        x_j = state.complementary_set[np.random.randint(0, len(state.complementary_set))]
         # sample z
         z = self._sample_z(self._a)
         # move
@@ -187,37 +218,89 @@ class StretchAdaptative(Stretch):
     """
     Stretch move as defined in 'Goodman, J., Weare, J., 2010, Comm. App. Math. and Comp. Sci., 5, 65' with decreasing
     'a' parameter.
+
+    :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
+        while bigger values make samples more spread out with a peak getting closer to 0.
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, a: float = 2., bounds: Optional[Sequence[Tuple[float, float]]] = None):
-        """
-        :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
-            while bigger values make samples more spread out with a peak getting closer to 0.
-        :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
-        """
+    def __init__(self,
+                 a: float = 2.,
+                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
         super().__init__(a=a, bounds=bounds)
 
     def get_proposal(self,
                      x: np.ndarray,
-                     c: List[np.ndarray],
-                     iteration: int,
-                     max_iter: int,
-                     *args, **kwargs) -> np.ndarray:
+                     state: State) -> np.ndarray:
         """
         Generate a new proposed vector x.
 
         :param x: current vector x of shape (ndim,)
-        :param c: set of complementary vectors x_[k] of shape (nb_walkers-1, ndim)
-        :param iteration: current iteration number.
-        :param max_iter: maximum iteration number.
+        :param state: current state of the SA algorithm.
 
         :return: new proposed vector x of shape (ndim,)
         """
         # pick X_j at random from the complementary set
-        x_j = c[np.random.randint(0, len(c))]
+        x_j = state.complementary_set[np.random.randint(0, len(state.complementary_set))]
         # sample z
-        r = iteration / max_iter
+        r = state.iteration / state.max_iter
         a = (1.5-self._a)*r+self._a
         z = self._sample_z(a)
         # move
         return self._valid_proposal(x_j + z * (x - x_j))
+
+
+# functions
+def parse_moves(moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]],
+                nb_walkers: int) -> Tuple[List[float], List[Move]]:
+    """
+    Parse moves given by the user to obtain a list of moves and associated probabilities of drawing those moves.
+
+    :param moves: a single Move object, a sequence of Moves (uniform probabilities are assumed on all Moves) or a
+        sequence of tuples with format (probability: float, Move).
+    :param nb_walkers: the number of parallel walkers in the ensemble.
+
+    :return: the list of probabilities and the list of associated moves.
+    """
+    if not isinstance(moves, collections.Sequence) or isinstance(moves, str):
+        if isinstance(moves, Move):
+            if issubclass(type(moves), EnsembleMove) and nb_walkers < 2:
+                raise ValueError('Ensemble moves require at least 2 walkers to be used.')
+
+            return [1.0], [moves]
+
+        raise ValueError(f"Invalid object '{moves}' of type '{type(moves)}' for defining moves, expected a "
+                         f"'Move', a sequence of 'Move's or a sequence of tuples "
+                         f"'(probability: float, 'Move')'.")
+
+    parsed_probabilities = []
+    parsed_moves = []
+
+    for move in moves:
+        if isinstance(move, Move):
+            if issubclass(type(move), EnsembleMove) and nb_walkers < 2:
+                raise ValueError('Ensemble moves require at least 2 walkers to be used.')
+
+            parsed_probabilities.append(1.0)
+            parsed_moves.append(move)
+
+        elif isinstance(move, tuple):
+            if len(move) == 2 and isinstance(move[0], float) and isinstance(move[1], Move):
+                if issubclass(type(move[1]), EnsembleMove) and nb_walkers < 2:
+                    raise ValueError('Ensemble moves require at least 2 walkers to be used.')
+
+                parsed_probabilities.append(move[0])
+                parsed_moves.append(move[1])
+
+            else:
+                raise ValueError(f"Invalid format for tuple '{move}', expected '(probability: float, Move)'.")
+
+        else:
+            raise ValueError(f"Invalid object '{move}' of type '{type(move)}' encountered in the sequence of moves for "
+                             f"defining a move, expected a 'Move' or tuple '(probability: float, 'Move')'.")
+
+    if sum(parsed_probabilities) != 1:
+        _sum = sum(parsed_probabilities)
+        parsed_probabilities = [proba / _sum for proba in parsed_probabilities]
+
+    return parsed_probabilities, parsed_moves

@@ -10,9 +10,10 @@ This package provides an implementation of the simulated annealing method for mi
 # ====================================================
 # imports
 from .sa import sa
-from .moves import Move, RandomStep, Metropolis, Stretch, StretchAdaptative
+from .moves import Move, RandomStep, Metropolis, Stretch, StretchAdaptative, SetStep
 
 # ====================================================
 # code
-__all__ = ['sa',
-           'Move', 'RandomStep', 'Metropolis', 'Stretch', 'StretchAdaptative']
+__all__ = ['sa', 'Move',
+           'RandomStep', 'Metropolis', 'SetStep',
+           'Stretch', 'StretchAdaptative']

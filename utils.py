@@ -9,13 +9,13 @@ import warnings
 import collections
 import numpy as np
 import plotly.graph_objects as go
+from multiprocessing import cpu_count
 from dataclasses import dataclass, field
 from plotly.subplots import make_subplots
 
 from typing import Union, Sequence, Tuple, List, Callable, Any, Optional
 
 from .name_utils import ShapeError
-from .moves import Move, EnsembleMove
 
 
 # ====================================================
@@ -23,17 +23,16 @@ from .moves import Move, EnsembleMove
 class Trace:
     """
     Object for storing the trace history of an SA run.
+
+    :param nb_iterations: number of expected iterations for the SA algorithm.
+    :param shape: shape of the matrices to store (nb_walkers, d).
+    :param window_size: size of the window of values to test for convergence.
     """
 
     def __init__(self,
                  nb_iterations: int,
                  shape: Tuple[int, int],
                  window_size: int):
-        """
-        :param nb_iterations: number of expected iterations for the SA algorithm.
-        :param shape: shape of the matrices to store (nb_walkers, d).
-        :param window_size: size of the window of values to test for convergence.
-        """
         self.__position_trace = np.zeros((nb_iterations, shape[0], shape[1]), dtype=np.float32)
         self.__cost_trace = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
         self.__temperature_trace = np.zeros(nb_iterations, dtype=np.float32)
@@ -130,6 +129,20 @@ class Trace:
         return [np.sum(self.__accepted[self.__iteration_counter - self.__window_size:self.__iteration_counter, w]) /
                 self.__window_size for w in range(self.nb_walkers)]
 
+    def are_stuck(self) -> List[bool]:
+        """
+        Detect which walkers are stuck at the same position within the last <window_size> positions.
+
+        :return: The list of stuck walkers.
+        """
+        if self.__iteration_counter < self.__window_size:
+            return [False for _ in range(self.nb_walkers)]
+
+        return [np.all(
+            self.__position_trace[self.__iteration_counter - self.__window_size:self.__iteration_counter, w] == \
+            self.__position_trace[self.__iteration_counter - self.__window_size, w])
+            for w in range( self.nb_walkers)]
+
     @property
     def ndim(self) -> int:
         """
@@ -162,6 +175,9 @@ class Trace:
 
         :return: the best vector, best cost and iteration number that reached it.
         """
+        if self.__iteration_counter < self.__window_size:
+            return np.nan, np.nan, []
+
         lookup_array = self.__cost_trace[max(0, self.__iteration_counter - self.__window_size):self.__iteration_counter]
 
         _best_index = list(np.unravel_index(np.argmin(lookup_array), lookup_array.shape))
@@ -294,6 +310,20 @@ class Trace:
 
 
 @dataclass
+class State:
+    """
+    Object for describing the current state of the SA algorithm.
+
+    complementary_set: set of complementary vectors x_[k] of shape (nb_walkers-1, ndim)
+    iteration: current iteration number.
+    max_iter: maximum iteration number.
+    """
+    complementary_set: np.ndarray
+    iteration: int
+    max_iter: int
+
+
+@dataclass
 class Result:
     """
     Object for storing the results of a run.
@@ -343,61 +373,6 @@ class Result:
                f"x: {self.x}"
 
 
-def parse_moves(moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]],
-                nb_walkers: int) -> Tuple[List[float], List[Move]]:
-    """
-    Parse moves given by the user to obtain a list of moves and associated probabilities of drawing those moves.
-
-    :param moves: a single Move object, a sequence of Moves (uniform probabilities are assumed on all Moves) or a
-        sequence of tuples with format (probability: float, Move).
-    :param nb_walkers: the number of parallel walkers in the ensemble.
-
-    :return: the list of probabilities and the list of associated moves.
-    """
-    if not isinstance(moves, collections.Sequence) or isinstance(moves, str):
-        if isinstance(moves, Move):
-            if issubclass(type(moves), EnsembleMove) and nb_walkers < 2:
-                raise ValueError('Ensemble moves require at least 2 walkers to be used.')
-
-            return [1.0], [moves]
-
-        raise ValueError(f"Invalid object '{moves}' of type '{type(moves)}' for defining moves, expected a "
-                         f"'Move', a sequence of 'Move's or a sequence of tuples "
-                         f"'(probability: float, 'Move')'.")
-
-    parsed_probabilities = []
-    parsed_moves = []
-
-    for move in moves:
-        if isinstance(move, Move):
-            if issubclass(type(move), EnsembleMove) and nb_walkers < 2:
-                raise ValueError('Ensemble moves require at least 2 walkers to be used.')
-
-            parsed_probabilities.append(1.0)
-            parsed_moves.append(move)
-
-        elif isinstance(move, tuple):
-            if len(move) == 2 and isinstance(move[0], float) and isinstance(move[1], Move):
-                if issubclass(type(move[1]), EnsembleMove) and nb_walkers < 2:
-                    raise ValueError('Ensemble moves require at least 2 walkers to be used.')
-
-                parsed_probabilities.append(move[0])
-                parsed_moves.append(move[1])
-
-            else:
-                raise ValueError(f"Invalid format for tuple '{move}', expected '(probability: float, Move)'.")
-
-        else:
-            raise ValueError(f"Invalid object '{move}' of type '{type(move)}' encountered in the sequence of moves for "
-                             f"defining a move, expected a 'Move' or tuple '(probability: float, 'Move')'.")
-
-    if sum(parsed_probabilities) != 1:
-        _sum = sum(parsed_probabilities)
-        parsed_probabilities = [proba / _sum for proba in parsed_probabilities]
-
-    return parsed_probabilities, parsed_moves
-
-
 def get_delta_max() -> float:
     """TODO"""
     raise NotImplementedError
@@ -412,9 +387,9 @@ def check_parameters(args: Optional[Sequence],
                      epsilon: float,
                      T_0: Optional[float],
                      tol: float,
-                     window_size: int,
-                     bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]]) -> Tuple[
-    Tuple, np.ndarray, int, int, float, float, float, float, int, bool
+                     bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]],
+                     nb_cores: int) -> Tuple[
+    Tuple, np.ndarray, int, int, float, float, float, float, bool, int
 ]:
     """
     Check validity of parameters.
@@ -429,21 +404,26 @@ def check_parameters(args: Optional[Sequence],
         steeper descent profiles)
     :param T_0: optional initial temperature value.
     :param tol: the convergence tolerance.
-    :param window_size: a window of the last <window_size> cost values are used to test for convergence.
     :param bounds: an optional sequence of bounds (one for each <n> dimensions) with the following format:
         (lower_bound, upper_bound)
         or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
+    :param nb_cores: number of cores that can be used to move walkers in parallel.
 
     :return: Valid parameters.
     """
     args = args if args is not None else ()
 
     if x0.ndim == 1:
-        x0 = np.array([x0 for _ in range(nb_walkers)])
+        x0 = np.array([x0 + np.random.random() - 0.5 for _ in range(nb_walkers)])
 
     if x0.shape[0] != nb_walkers:
         raise ShapeError(f'Matrix of initial values should have {nb_walkers} rows (equal to the number of '
                          f'parallel walkers), not {x0.shape[0]}')
+
+    if np.all([x0[0] == x0[i] for i in range(1, len(x0))]):
+        warnings.warn('Initial positions are the same for all walkers, adding random noise.')
+
+        x0 = np.array([x0[i] + np.random.random() - 0.5 for i in range(len(x0))])
 
     if bounds is not None:
         if isinstance(bounds, tuple) and isinstance(bounds[0], numbers.Number) and isinstance(bounds[1], numbers.Number):
@@ -459,6 +439,7 @@ def check_parameters(args: Optional[Sequence],
                 if isinstance(bound, tuple) and isinstance(bound[0], numbers.Number) and isinstance(bound[1],
                                                                                                     numbers.Number):
                     if np.any(x0[:, dim_index] < bound[0]) or np.any(x0[:, dim_index] > bound[1]):
+                        print(x0[:, dim_index])
                         raise ValueError(f'Some values in x0 do not lie in between defined bounds for dimensions '
                                          f'{dim_index}.')
 
@@ -505,12 +486,14 @@ def check_parameters(args: Optional[Sequence],
     if tol <= 0:
         raise ValueError("'tol' parameter must be strictly positive.")
 
-    if window_size < 1:
-        raise ValueError("'window_size' parameter must be greater than 0.")
+    if nb_cores < 1:
+        raise ValueError('Cannot use less than one core.')
+    elif nb_cores > cpu_count():
+        raise ValueError(f"Cannot use more than available CPUs ({cpu_count()}).")
     else:
-        window_size = int(window_size)
+        nb_cores = int(nb_cores)
 
-    return args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, window_size, computed_T_0
+    return args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, computed_T_0, nb_cores
 
 
 def get_mean_cost(fun: Callable[[np.ndarray, Any], float],
