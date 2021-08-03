@@ -2,11 +2,11 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="ensemble moves implemented">
+      <change afterPath="$PROJECT_DIR$/__mappers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/moves.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/sa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/test_stretch_move.ipynb" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -94,6 +94,10 @@
       <updated>1627479411111</updated>
       <workItem from="1627479412248" duration="29627000" />
       <workItem from="1627655765717" duration="20280000" />
+      <workItem from="1627905253313" duration="761000" />
+      <workItem from="1627906518483" duration="4000" />
+      <workItem from="1627907017500" duration="9948000" />
+      <workItem from="1627981258633" duration="11657000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
