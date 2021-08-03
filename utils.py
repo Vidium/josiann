@@ -36,7 +36,7 @@ class Trace:
         self.__position_trace = np.zeros((nb_iterations, shape[0], shape[1]), dtype=np.float32)
         self.__cost_trace = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
         self.__temperature_trace = np.zeros(nb_iterations, dtype=np.float32)
-        self.__n_trace = np.zeros(nb_iterations, dtype=np.int16)
+        self.__n_trace = np.zeros(nb_iterations, dtype=np.int32)
         self.__sigma_trace = np.zeros(nb_iterations, dtype=np.float32)
         self.__accepted = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
 
@@ -64,11 +64,11 @@ class Trace:
         """
         Cleanup traces at the end of the SA algorithm.
         """
-        self.__position_trace = self.__position_trace[:self.__iteration_counter]
-        self.__cost_trace = self.__cost_trace[:self.__iteration_counter]
-        self.__temperature_trace = self.__temperature_trace[:self.__iteration_counter]
-        self.__n_trace = self.__n_trace[:self.__iteration_counter]
-        self.__sigma_trace = self.__sigma_trace[:self.__iteration_counter]
+        self.__position_trace = self.__position_trace[:self.__iteration_counter+1]
+        self.__cost_trace = self.__cost_trace[:self.__iteration_counter+1]
+        self.__temperature_trace = self.__temperature_trace[:self.__iteration_counter+1]
+        self.__n_trace = self.__n_trace[:self.__iteration_counter+1]
+        self.__sigma_trace = self.__sigma_trace[:self.__iteration_counter+1]
 
     def store(self,
               position: np.ndarray,
@@ -138,10 +138,8 @@ class Trace:
         if self.__iteration_counter < self.__window_size:
             return [False for _ in range(self.nb_walkers)]
 
-        return [np.all(
-            self.__position_trace[self.__iteration_counter - self.__window_size:self.__iteration_counter, w] == \
-            self.__position_trace[self.__iteration_counter - self.__window_size, w])
-            for w in range( self.nb_walkers)]
+        return [np.sum(self.__accepted[self.__iteration_counter - self.__window_size:self.__iteration_counter, w]) == 0
+                for w in range(self.nb_walkers)]
 
     @property
     def ndim(self) -> int:
@@ -220,10 +218,15 @@ class Trace:
         for w in range(self.nb_walkers):
             fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
                                      y=self.__cost_trace[:, w],
-                                     name=f'costs[{w}]',
+                                     name=f'Walker #{w}',
                                      marker=dict(color='rgba(0, 0, 200, 0.3)'),
-                                     hovertext=self.__cost_trace,
-                                     showlegend=False), row=1, col=1)
+                                     hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                f"<b>Cost</b>: {cost:.4f}<br>"
+                                                f"<b>Iteration</b>: {iteration}"
+                                                for iteration, cost in enumerate(self.__cost_trace[:, w])],
+                                     hoverinfo="text",
+                                     showlegend=True,
+                                     legendgroup=f'Walker #{w}'), row=1, col=1)
 
         for i in range(self.ndim):
             for w in range(self.nb_walkers):
@@ -231,10 +234,16 @@ class Trace:
                                          y=self.__position_trace[:, w, i],
                                          marker=dict(color='rgba(0, 0, 0, 0.3)'),
                                          name=f'Walker #{w}',
-                                         showlegend=False), row=i + 2, col=1)
+                                         hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                    f"<b>Cost</b>: {cost:.4f}<br>"
+                                                    f"<b>Iteration</b>: {iteration}"
+                                                    for iteration, cost in enumerate(self.__cost_trace[:, w])],
+                                         hoverinfo="text",
+                                         showlegend=False,
+                                         legendgroup=f'Walker #{w}'), row=i + 2, col=1)
 
             if true_values is not None:
-                fig.add_trace(go.Scatter(x=[0, self.nb_positions],
+                fig.add_trace(go.Scatter(x=[0, self.nb_positions-1],
                                          y=[true_values[i], true_values[i]],
                                          mode='lines',
                                          marker=dict(color='rgba(200, 0, 0, 1)'),
@@ -244,8 +253,8 @@ class Trace:
                 fig.add_annotation(
                     x=len(self.__position_trace),
                     y=np.max(self.__position_trace[:, :, i]),
-                    xref=f"x{i+2}",
-                    yref=f"y{i+2}",
+                    xref=f"x{i + 2}",
+                    yref=f"y{i + 2}",
                     text=f"True value : {true_values[i]}",
                     showarrow=False,
                     borderwidth=0,
@@ -257,7 +266,7 @@ class Trace:
         for i in range(self.ndim + 1):
             fig.layout.annotations[i].update(x=0.025, xanchor='left')
 
-        fig['layout'].update(height=200*(self.ndim + 1), width=600, margin=dict(t=40, b=10, l=10, r=10))
+        fig['layout'].update(height=200 * (self.ndim + 1), width=600, margin=dict(t=40, b=10, l=10, r=10))
 
         fig.show()
 
@@ -266,25 +275,34 @@ class Trace:
         Plot temperature, number of repeats per iteration and number of averaged function evaluations along iterations.
         """
         fig = make_subplots(rows=4, cols=1, shared_xaxes=True,
-                            subplot_titles=("Temperature", "Sigma", "n", "Acceptance fraction (%)"),
+                            subplot_titles=("Temperature", "sigma", "n", "Acceptance fraction (%)"),
                             vertical_spacing=0.05)
 
-        fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+        fig.add_trace(go.Scatter(x=list(range(1, self.nb_iterations)),
                                  y=self.__temperature_trace,
                                  name='T',
-                                 hovertext=self.__temperature_trace,
+                                 hovertext=[f"<b>Temperature</b>: {_T:.4f}<br>"
+                                            f"<b>Iteration</b>: {iteration+1}"
+                                            for iteration, _T in enumerate(self.__temperature_trace)],
+                                 hoverinfo="text",
                                  showlegend=False), row=1, col=1)
 
-        fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+        fig.add_trace(go.Scatter(x=list(range(1, self.nb_iterations)),
                                  y=self.__sigma_trace,
                                  name='sigma',
-                                 hovertext=self.__sigma_trace,
+                                 hovertext=[f"<b>Sigma</b>: {_sigma:.4f}<br>"
+                                            f"<b>Iteration</b>: {iteration+1}"
+                                            for iteration, _sigma in enumerate(self.__sigma_trace)],
+                                 hoverinfo="text",
                                  showlegend=False), row=2, col=1)
 
-        fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+        fig.add_trace(go.Scatter(x=list(range(1, self.nb_iterations)),
                                  y=self.__n_trace,
                                  name='n',
-                                 hovertext=self.__n_trace,
+                                 hovertext=[f"<b>Number evaluations</b>: {_n}<br>"
+                                            f"<b>Iteration</b>: {iteration+1}"
+                                            for iteration, _n in enumerate(self.__n_trace)],
+                                 hoverinfo="text",
                                  showlegend=False), row=3, col=1)
 
         for w in range(self.nb_walkers):
@@ -295,10 +313,13 @@ class Trace:
 
             fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
                                      y=accepted_proportion,
-                                     name=f'% accepted[{w}]',
+                                     name=f'Walker #{w}',
                                      marker=dict(color='rgba(0, 0, 200, 0.3)'),
-                                     hovertext=accepted_proportion,
-                                     showlegend=False), row=4, col=1)
+                                     hovertext=[f"<b>Acceptance percentage</b>: {accepted}<br>"
+                                                f"<b>Iteration</b>: {iteration}"
+                                                for iteration, accepted in enumerate(accepted_proportion)],
+                                     hoverinfo="text",
+                                     showlegend=True), row=4, col=1)
 
         fig.update_layout(yaxis4=dict(range=[0, 100]), height=150 * (self.ndim + 1), width=600,
                           margin=dict(t=40, b=10, l=10, r=10))
@@ -388,7 +409,8 @@ def check_parameters(args: Optional[Sequence],
                      T_0: Optional[float],
                      tol: float,
                      bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]],
-                     nb_cores: int) -> Tuple[
+                     nb_cores: int,
+                     vectorized: bool) -> Tuple[
     Tuple, np.ndarray, int, int, float, float, float, float, bool, int
 ]:
     """
@@ -408,13 +430,15 @@ def check_parameters(args: Optional[Sequence],
         (lower_bound, upper_bound)
         or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
     :param nb_cores: number of cores that can be used to move walkers in parallel.
+    :param vectorized: if True, the cost function <fun> is expected to work on an array of position vectors instead of
+        just one. (<nb_cores> parameter will be set to 1 in this case.)
 
     :return: Valid parameters.
     """
     args = args if args is not None else ()
 
     if x0.ndim == 1:
-        x0 = np.array([x0 + np.random.random() - 0.5 for _ in range(nb_walkers)])
+        x0 = np.array([x0 + np.random.uniform(-0.5e-10, 0.5e-10) for _ in range(nb_walkers)])
 
     if x0.shape[0] != nb_walkers:
         raise ShapeError(f'Matrix of initial values should have {nb_walkers} rows (equal to the number of '
@@ -423,10 +447,11 @@ def check_parameters(args: Optional[Sequence],
     if np.all([x0[0] == x0[i] for i in range(1, len(x0))]):
         warnings.warn('Initial positions are the same for all walkers, adding random noise.')
 
-        x0 = np.array([x0[i] + np.random.random() - 0.5 for i in range(len(x0))])
+        x0 = np.array([x0[i] + np.random.uniform(-0.5e-10, 0.5e-10) for i in range(len(x0))])
 
     if bounds is not None:
-        if isinstance(bounds, tuple) and isinstance(bounds[0], numbers.Number) and isinstance(bounds[1], numbers.Number):
+        if isinstance(bounds, tuple) and isinstance(bounds[0], numbers.Number) \
+                and isinstance(bounds[1], numbers.Number):
             if np.any(x0 < bounds[0]) or np.any(x0 > bounds[1]):
                 raise ValueError('Some values in x0 do not lie in between defined bounds.')
 
@@ -486,6 +511,9 @@ def check_parameters(args: Optional[Sequence],
     if tol <= 0:
         raise ValueError("'tol' parameter must be strictly positive.")
 
+    if vectorized:
+        nb_cores = 1
+
     if nb_cores < 1:
         raise ValueError('Cannot use less than one core.')
     elif nb_cores > cpu_count():
@@ -498,7 +526,8 @@ def check_parameters(args: Optional[Sequence],
 
 def get_mean_cost(fun: Callable[[np.ndarray, Any], float],
                   x: np.ndarray,
-                  _n: int, *args) -> float:
+                  _n: int,
+                  *args) -> float:
     """
     Get the mean of <n> function evaluations for vector of values <x>.
 
@@ -509,6 +538,22 @@ def get_mean_cost(fun: Callable[[np.ndarray, Any], float],
     :return: the mean of function evaluations at x.
     """
     return float(np.mean([fun(x, *args) for _ in range(_n)]))
+
+
+def get_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], List[float]],
+                             x: np.ndarray,
+                             _n: int,
+                             *args) -> List[float]:
+    """
+    Same as 'get_mean_cost' but <fun> is a vectorized function and costs are computed for all walkers at once.
+
+    :param fun: a vectorized function to evaluate.
+    :param x: a matrix of position vectors of shape (nb_walkers, d).
+    :param _n: the number of evaluations to compute.
+
+    :return: the mean of function evaluations at x.
+    """
+    return list(np.mean([fun(x, *args) for _ in range(_n)], axis=0))
 
 
 def acceptance_log_probability(current_cost: float,
