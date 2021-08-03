@@ -235,6 +235,7 @@ class Trace:
                                          marker=dict(color='rgba(0, 0, 0, 0.3)'),
                                          name=f'Walker #{w}',
                                          hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                    f"<b>Position</b>: {self.__position_trace[iteration, w, i]:.4f}<br>"
                                                     f"<b>Cost</b>: {cost:.4f}<br>"
                                                     f"<b>Iteration</b>: {iteration}"
                                                     for iteration, cost in enumerate(self.__cost_trace[:, w])],
@@ -537,7 +538,7 @@ def get_mean_cost(fun: Callable[[np.ndarray, Any], float],
 
     :return: the mean of function evaluations at x.
     """
-    return float(np.mean([fun(x, *args) for _ in range(_n)]))
+    return float(np.mean([fun(x, *args)**2 for _ in range(_n)]))
 
 
 def get_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], List[float]],
@@ -553,7 +554,7 @@ def get_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], List[float]],
 
     :return: the mean of function evaluations at x.
     """
-    return list(np.mean([fun(x, *args) for _ in range(_n)], axis=0))
+    return list(np.mean([np.array(fun(x, *args))**2 for _ in range(_n)], axis=0))
 
 
 def acceptance_log_probability(current_cost: float,

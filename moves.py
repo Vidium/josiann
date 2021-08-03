@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from typing import Optional, Sequence, Tuple, Union, List
 
 from .utils import State
+from .name_utils import ShapeError
 
 
 # ====================================================
@@ -98,16 +99,21 @@ class SetStep(Move):
     Step within a fixed set of possible values for x. For each dimension, the position immediately before or after x
         will be chosen at random when stepping.
 
-    :param position_set: set of only possible values for x in each dimension.
+    :param position_set: sets of only possible values for x in each dimension.
     :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
-                 position_set: Sequence[float],
+                 position_set: Sequence[Sequence[float]],
                  bounds: Optional[Sequence[Tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
-        self.__position_set = np.sort(position_set)
-        self.__reversed_position_set = self.__position_set[::-1]
+
+        if not all(isinstance(p, (Sequence, np.ndarray)) for p in position_set):
+            raise ShapeError(f"'position_set' parameter should be an array of possible position values of shape "
+                             f"(dimensions, nb_values) (nb_values can be different for each dimension).")
+
+        self.__position_set = [np.sort(p) for p in position_set]
+        self.__reversed_position_set = [v[::-1] for v in self.__position_set]
 
     def get_proposal(self,
                      x: np.ndarray,
@@ -124,10 +130,11 @@ class SetStep(Move):
 
         for ndim in range(len(x)):
             if np.random.rand() > 0.5:
-                new_x[ndim] = self.__position_set[np.argmax(self.__position_set > x[ndim])]
+                new_x[ndim] = self.__position_set[ndim][np.argmax(self.__position_set[ndim] > x[ndim])]
 
             else:
-                new_x[ndim] = self.__reversed_position_set[np.argmax(self.__reversed_position_set < x[ndim])]
+                new_x[ndim] = self.__reversed_position_set[ndim][np.argmax(self.__reversed_position_set[ndim] <
+                                                                           x[ndim])]
 
         return self._valid_proposal(new_x)
 
@@ -214,7 +221,7 @@ class Stretch(EnsembleMove):
         return self._valid_proposal(x_j + z * (x - x_j))
 
 
-class StretchAdaptative(Stretch):
+class StretchAdaptive(Stretch):
     """
     Stretch move as defined in 'Goodman, J., Weare, J., 2010, Comm. App. Math. and Comp. Sci., 5, 65' with decreasing
     'a' parameter.
