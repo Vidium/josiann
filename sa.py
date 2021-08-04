@@ -6,6 +6,7 @@
 # imports
 import numpy as np
 from tqdm import tqdm
+from warnings import warn
 from itertools import repeat
 
 
@@ -71,7 +72,10 @@ def __initialize_sa(args: Optional[Sequence],
         = check_parameters(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability, epsilon, T_0,
                            tol, bounds, nb_cores, vectorized)
 
-    window_size = max(20, min(50, int(0.1 * max_iter)))
+    window_size = min(50, int(0.1 * max_iter))
+
+    if max_iter < 200:
+        warn('It is not recommended running the SA algorithm with less than 200 iterations.')
 
     # get moves and associated probabilities
     list_probabilities, list_moves = parse_moves(moves, nb_walkers)
@@ -169,6 +173,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
             temperature = T(iteration, T_0, alpha)
             current_n = n(iteration, max_measures, sigma_max, T_0, alpha, epsilon)
             accepted = [False for _ in range(nb_walkers)]
+            rescued = [False for _ in range(nb_walkers)]
             best_position, best_cost, best_iteration = trace.get_best()
             stuck_walkers = trace.are_stuck()
 
@@ -198,8 +203,9 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
                                                              best_cost
                     last_ns[_walker_index] = n(best_iteration[0], max_measures, sigma_max, T_0, alpha, epsilon)
                     accepted[_walker_index] = True
+                    rescued[_walker_index] = True
 
-            trace.store(x, costs, temperature, current_n, sigma(iteration, T_0, alpha, epsilon), accepted)
+            trace.store(x, costs, temperature, current_n, sigma(iteration, T_0, alpha, epsilon), accepted, rescued)
 
             progress_bar.set_description(f"T: {temperature:.4f}    %A: {trace.acceptance_fraction()[0]*100:.4f}%    "
                                          f"Best: {trace.get_best()[1]:.4f} Current: {np.min(costs):.4f}")

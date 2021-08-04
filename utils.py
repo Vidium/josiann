@@ -39,6 +39,7 @@ class Trace:
         self.__n_trace = np.zeros(nb_iterations, dtype=np.int32)
         self.__sigma_trace = np.zeros(nb_iterations, dtype=np.float32)
         self.__accepted = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
+        self.__rescued = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
 
         self.__initialized = False
 
@@ -69,6 +70,8 @@ class Trace:
         self.__temperature_trace = self.__temperature_trace[:self.__iteration_counter+1]
         self.__n_trace = self.__n_trace[:self.__iteration_counter+1]
         self.__sigma_trace = self.__sigma_trace[:self.__iteration_counter+1]
+        self.__accepted = self.__accepted[:self.__iteration_counter+1]
+        self.__rescued = self.__rescued[:self.__iteration_counter+1]
 
     def store(self,
               position: np.ndarray,
@@ -76,7 +79,8 @@ class Trace:
               temperature: float,
               _n: int,
               _sigma: float,
-              accepted: List[bool]) -> None:
+              accepted: List[bool],
+              rescued: List[bool]) -> None:
         """
         Save the current position of the vector to optimize, the current cost, temperature and number of averaged
             function evaluations.
@@ -87,6 +91,7 @@ class Trace:
         :param _n: the current number of averaged function evaluations.
         :param _sigma: the current estimated standard deviation.
         :param accepted: were the current propositions accepted ?
+        :param rescued: were the walkers rescued at this iteration ?
         """
         self.__position_trace[self.__iteration_counter + 1 * self.__initialized] = position.copy()
         self.__cost_trace[self.__iteration_counter + 1 * self.__initialized] = np.array(costs)
@@ -94,6 +99,7 @@ class Trace:
         self.__n_trace[self.__iteration_counter] = int(_n)
         self.__sigma_trace[self.__iteration_counter] = float(_sigma)
         self.__accepted[self.__iteration_counter] = np.array(accepted)
+        self.__rescued[self.__iteration_counter] = np.array(rescued)
 
         self.__iteration_counter += 1
 
@@ -202,6 +208,14 @@ class Trace:
         """
         return self.__temperature_trace, self.__n_trace, self.__sigma_trace
 
+    def get_acceptance_trace(self) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Get traces related to acceptance rates along iterations.
+
+        :return: Traces related to acceptance rates along iterations.
+        """
+        return self.__accepted, self.__rescued
+
     def plot_positions(self, true_values: Optional[Sequence[float]] = None) -> None:
         """
         Plot reached positions and costs for the vector to optimize along iterations.
@@ -228,35 +242,53 @@ class Trace:
                                      showlegend=True,
                                      legendgroup=f'Walker #{w}'), row=1, col=1)
 
-        for i in range(self.ndim):
+        for d in range(self.ndim):
             for w in range(self.nb_walkers):
                 fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
-                                         y=self.__position_trace[:, w, i],
+                                         y=self.__position_trace[:, w, d],
                                          marker=dict(color='rgba(0, 0, 0, 0.3)'),
                                          name=f'Walker #{w}',
                                          hovertext=[f"<b>Walker</b>: {w}<br>"
-                                                    f"<b>Position</b>: {self.__position_trace[iteration, w, i]:.4f}<br>"
+                                                    f"<b>Position</b>: {self.__position_trace[iteration, w, d]:.4f}<br>"
                                                     f"<b>Cost</b>: {cost:.4f}<br>"
                                                     f"<b>Iteration</b>: {iteration}"
                                                     for iteration, cost in enumerate(self.__cost_trace[:, w])],
                                          hoverinfo="text",
                                          showlegend=False,
-                                         legendgroup=f'Walker #{w}'), row=i + 2, col=1)
+                                         legendgroup=f'Walker #{w}'), row=d + 2, col=1)
+
+                # add rescue points
+                rescue_iterations = np.where(self.__rescued[:, w])[0]
+                fig.add_trace(go.Scatter(x=rescue_iterations,
+                                         y=self.__position_trace[rescue_iterations, w, d],
+                                         mode='markers',
+                                         marker=dict(color='rgba(0, 255, 0, 0.3)',
+                                                     symbol=2,
+                                                     size=10),
+                                         name=f'Rescues for walker #{w}',
+                                         hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                    f"<b>Position</b>: {self.__position_trace[iteration, w, d]:.4f}<br>"
+                                                    f"<b>Cost</b>: {self.__cost_trace[iteration, w]:.4f}<br>"
+                                                    f"<b>Iteration</b>: {iteration}"
+                                                    for iteration in range(len(rescue_iterations))],
+                                         hoverinfo="text",
+                                         showlegend=False,
+                                         legendgroup=f'Walker #{w}'), row=d + 2, col=1)
 
             if true_values is not None:
                 fig.add_trace(go.Scatter(x=[0, self.nb_positions-1],
-                                         y=[true_values[i], true_values[i]],
+                                         y=[true_values[d], true_values[d]],
                                          mode='lines',
                                          marker=dict(color='rgba(200, 0, 0, 1)'),
                                          name=f'True value',
-                                         showlegend=False), row=i + 2, col=1)
+                                         showlegend=False), row=d + 2, col=1)
 
                 fig.add_annotation(
                     x=len(self.__position_trace),
-                    y=np.max(self.__position_trace[:, :, i]),
-                    xref=f"x{i + 2}",
-                    yref=f"y{i + 2}",
-                    text=f"True value : {true_values[i]}",
+                    y=np.max(self.__position_trace[:, :, d]),
+                    xref=f"x{d + 2}",
+                    yref=f"y{d + 2}",
+                    text=f"True value : {true_values[d]}",
                     showarrow=False,
                     borderwidth=0,
                     borderpad=4,
@@ -439,13 +471,17 @@ def check_parameters(args: Optional[Sequence],
     args = args if args is not None else ()
 
     if x0.ndim == 1:
-        x0 = np.array([x0 + np.random.uniform(-0.5e-10, 0.5e-10) for _ in range(nb_walkers)])
+        if len(x0) > 1:
+            x0 = np.array([x0 + np.random.uniform(-0.5e-10, 0.5e-10) for _ in range(nb_walkers)])
+
+        else:
+            x0 = np.array([x0])
 
     if x0.shape[0] != nb_walkers:
         raise ShapeError(f'Matrix of initial values should have {nb_walkers} rows (equal to the number of '
                          f'parallel walkers), not {x0.shape[0]}')
 
-    if np.all([x0[0] == x0[i] for i in range(1, len(x0))]):
+    if len(x0) > 1 and np.all([x0[0] == x0[i] for i in range(1, len(x0))]):
         warnings.warn('Initial positions are the same for all walkers, adding random noise.')
 
         x0 = np.array([x0[i] + np.random.uniform(-0.5e-10, 0.5e-10) for i in range(len(x0))])

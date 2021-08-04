@@ -60,7 +60,7 @@ def _update_walker(fun: Callable[[np.ndarray, Any], float],
     proposed_cost = get_mean_cost(fun, proposed_x, current_n, *args)
 
     # accept move
-    if acceptance_log_probability(cost * last_n / current_n, proposed_cost, temperature) > np.log(np.random.random()):
+    if acceptance_log_probability(cost * current_n / last_n, proposed_cost, temperature) > np.log(np.random.random()):
         return proposed_x, proposed_cost, current_n, True, walker_index
 
     # reject move
@@ -119,7 +119,7 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
     proposed_costs = get_vectorized_mean_cost(fun, proposed_positions, current_n, *args)
 
     results = ((proposed_positions[walker_index], proposed_costs[walker_index], current_n, True, walker_index)
-               if acceptance_log_probability(costs[walker_index] * last_ns[walker_index] / current_n,
+               if acceptance_log_probability(costs[walker_index] * current_n / last_ns[walker_index],
                                              proposed_costs[walker_index],
                                              temperature) > np.log(np.random.random()) else
                (x[walker_index], costs[walker_index], last_ns[walker_index], False, walker_index)
