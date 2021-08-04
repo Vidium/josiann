@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="SetStep takes list of possible positions (one per dimension)">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/__mappers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/sa.py" afterDir="false" />
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed error on cost normalization + rescue points now visible on position graph">
       <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
     </list>
@@ -96,7 +93,7 @@
       <workItem from="1627905253313" duration="761000" />
       <workItem from="1627906518483" duration="4000" />
       <workItem from="1627907017500" duration="9948000" />
-      <workItem from="1627981258633" duration="21620000" />
+      <workItem from="1627981258633" duration="22007000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -126,7 +123,14 @@
       <option name="project" value="LOCAL" />
       <updated>1628001203005</updated>
     </task>
-    <option name="localTasksCounter" value="5" />
+    <task id="LOCAL-00005" summary="fixed error on cost normalization + rescue points now visible on position graph">
+      <created>1628085271208</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1628085271208</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -150,6 +154,7 @@
     <MESSAGE value="ensemble moves implemented" />
     <MESSAGE value="parallel evaluation and vectorized cost functions" />
     <MESSAGE value="SetStep takes list of possible positions (one per dimension)" />
-    <option name="LAST_COMMIT_MESSAGE" value="SetStep takes list of possible positions (one per dimension)" />
+    <MESSAGE value="fixed error on cost normalization + rescue points now visible on position graph" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed error on cost normalization + rescue points now visible on position graph" />
   </component>
 </project>

@@ -270,7 +270,7 @@ class Trace:
                                                     f"<b>Position</b>: {self.__position_trace[iteration, w, d]:.4f}<br>"
                                                     f"<b>Cost</b>: {self.__cost_trace[iteration, w]:.4f}<br>"
                                                     f"<b>Iteration</b>: {iteration}"
-                                                    for iteration in range(len(rescue_iterations))],
+                                                    for iteration in rescue_iterations],
                                          hoverinfo="text",
                                          showlegend=False,
                                          legendgroup=f'Walker #{w}'), row=d + 2, col=1)
