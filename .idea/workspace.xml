@@ -1,20 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed error on cost normalization + rescue points now visible on position graph">
-      <change afterPath="$PROJECT_DIR$/.drone.yml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.mypy.ini" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/.tox.ini" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/josiann/__backup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__mappers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/moves.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/name_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/name_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/utils.py" afterDir="false" />
-    </list>
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed some bugs on best cost computation" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -128,7 +115,7 @@
       <workItem from="1628088487140" duration="38000" />
       <workItem from="1628088534799" duration="39020000" />
       <workItem from="1628242366312" duration="7608000" />
-      <workItem from="1628255047454" duration="3171000" />
+      <workItem from="1628255047454" duration="3508000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -165,7 +152,14 @@
       <option name="project" value="LOCAL" />
       <updated>1628085271208</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="fixed some bugs on best cost computation">
+      <created>1628258508108</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1628258508108</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -190,6 +184,7 @@
     <MESSAGE value="parallel evaluation and vectorized cost functions" />
     <MESSAGE value="SetStep takes list of possible positions (one per dimension)" />
     <MESSAGE value="fixed error on cost normalization + rescue points now visible on position graph" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed error on cost normalization + rescue points now visible on position graph" />
+    <MESSAGE value="fixed some bugs on best cost computation" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed some bugs on best cost computation" />
   </component>
 </project>
