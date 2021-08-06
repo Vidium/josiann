@@ -300,9 +300,10 @@ class Trace:
             raise ShapeError(f'The vector of true values should have {self.ndim} dimensions, not {len(true_values)}.')
 
         supp_plots = 3 if extended else 1
-        titles = ["Costs"] + \
-                 ["n at cost evaluation", "Best cost evolution"] if extended else [] + \
-                 [f'Dimension {i}' for i in range(self.ndim)]
+        titles = ["Costs"] + [f'Dimension {i}' for i in range(self.ndim)]
+        if extended:
+            titles.insert(1, "n at cost evaluation")
+            titles.insert(2, "Best cost evolution")
 
         fig = make_subplots(rows=self.ndim + supp_plots, cols=1, shared_xaxes=True,
                             subplot_titles=titles,
@@ -343,7 +344,7 @@ class Trace:
 
             fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
                                      y=best_costs,
-                                     name=f'Best cost evolution',
+                                     name='Best cost evolution',
                                      marker=dict(color='rgba(252, 196, 25, 1.)'),
                                      hovertext=[f"<b>Walker</b>: {best_walkers[iteration]}<br>"
                                                 f"<b>Cost</b>: {cost}<br>"
@@ -392,7 +393,7 @@ class Trace:
                                      marker=dict(color='rgba(252, 196, 25, 1.)',
                                                  symbol=0,
                                                  size=3),
-                                     name=f'Best position',
+                                     name='Best position',
                                      hovertext=[f"<b>Walker</b>: {int(self.__best_position_trace[iteration, -2])}<br>"
                                                 f"<b>Position</b>: {position:.4f}<br>"
                                                 f"<b>Cost</b>: {self.__best_position_trace[iteration, -3]:.4f}<br>"
