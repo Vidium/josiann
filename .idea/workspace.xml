@@ -1,7 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed some bugs on best cost computation" />
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed some bugs on best cost computation">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" afterPath="$PROJECT_DIR$/test/test_1.ipynb" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -24,27 +29,27 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="notebook:///home/matteo/git/josiann/test/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/vdata/tests/fix_vdata.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/tests/tests_vdata/test_VData_read.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/name_utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/__backup.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/vdataframe.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/__mappers.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/indexers.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../Real_platform/app/pages/home/layout/home.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/.drone.yml" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../Real_platform/app/pages/home/callbacks/home_main_callbacks.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/.drone.yml" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_read_write/read.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/sa.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/.drone.yml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="notebook:///home/matteo/git/josiann/test/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/moves.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/views/dataframe.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_read_write/read.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/.drone.yml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/name_utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/vdataframe.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/indexers.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/__backup.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/__mappers.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/tests/tests_vdata/test_VData_read.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/moves.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/sa.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="notebook:///home/matteo/git/vdata/tests/fix_vdata.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
   </component>
   <component name="ProjectId" id="1vwiAwmzXj4uzoApDrrgHCeeiSP" />
   <component name="ProjectLevelVcsManager">
@@ -116,6 +121,8 @@
       <workItem from="1628088534799" duration="39020000" />
       <workItem from="1628242366312" duration="7608000" />
       <workItem from="1628255047454" duration="3508000" />
+      <workItem from="1628335038431" duration="1201000" />
+      <workItem from="1629876205260" duration="11010000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>

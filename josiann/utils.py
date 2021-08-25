@@ -148,7 +148,7 @@ class Trace:
             self.__rescued[index] = np.array(rescued)
 
             rescued_n = self.__cost_trace_n[position_index]
-            rescued_n[rescued_mask] = self.__cost_trace_n[position_index - 1, rescued_mask]
+            rescued_n[rescued_mask] = self.__cost_trace_n[best_index[0], best_index[1]]
             self.__cost_trace_n[position_index] = rescued_n
 
         self.__best_position_trace[position_index, :self.ndim] = best_position
@@ -259,7 +259,7 @@ class Trace:
             if corrected_index < 0:
                 break
 
-        _best_index[0] = corrected_index
+        _best_index[0] = corrected_index + 1 * self.__initialized
 
         return self.__position_trace[_best_index[0], _best_index[1]], \
             self.__cost_trace[_best_index[0], _best_index[1]], \
@@ -336,7 +336,7 @@ class Trace:
                                          legendgroup=f'Walker #{w}'), row=2, col=1)
 
         if extended:
-            with np.errstate(divide='ignore'):
+            with np.errstate(divide='ignore', invalid='ignore'):
                 best_costs = [self.__best_position_trace[it, -3] * np.insert(self.__n_trace, 0, 0)[it] /
                               self.__best_position_trace[it, -1]
                               for it in range(self.nb_positions)]
@@ -393,7 +393,7 @@ class Trace:
                                      marker=dict(color='rgba(252, 196, 25, 1.)',
                                                  symbol=0,
                                                  size=3),
-                                     name='Best position',
+                                     name='Best cost',
                                      hovertext=[f"<b>Walker</b>: {int(self.__best_position_trace[iteration, -2])}<br>"
                                                 f"<b>Position</b>: {position:.4f}<br>"
                                                 f"<b>Cost</b>: {self.__best_position_trace[iteration, -3]:.4f}<br>"
@@ -401,7 +401,7 @@ class Trace:
                                                 for iteration, position in enumerate(self.__best_position_trace[:, d])],
                                      hoverinfo="text",
                                      showlegend=True if d == 0 else False,
-                                     legendgroup='Best position'), row=d + supp_plots + 1, col=1)
+                                     legendgroup='Best cost'), row=d + supp_plots + 1, col=1)
 
             if true_values is not None:
                 fig.add_trace(go.Scatter(x=[0, self.nb_positions-1],
