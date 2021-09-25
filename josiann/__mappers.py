@@ -245,7 +245,7 @@ class ParallelExecutor(ProcessPoolExecutor):
                               for walker_index in range(len(kwargs['positions']))]
 
         return super().map(_update_walker,
-                           *(repeat(fn), *iterables, complementary_sets, repeat(self.backup),   # type: ignore
+                           *(repeat(fn), *iterables, complementary_sets, repeat(self.backup),  # type: ignore
                              range(len(kwargs['positions']))),
                            timeout=timeout,
                            chunksize=chunksize)

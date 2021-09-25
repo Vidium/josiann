@@ -6,9 +6,10 @@
 # imports
 import numbers
 import warnings
-import collections
+import collections.abc
 import numpy as np
 import plotly.graph_objects as go
+from pathlib import Path
 from multiprocessing import cpu_count
 from dataclasses import dataclass, field
 from plotly.subplots import make_subplots
@@ -42,6 +43,7 @@ class Trace:
         self.__sigma_trace = np.zeros(nb_iterations, dtype=np.float32)
         self.__accepted = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
         self.__rescued = np.zeros((nb_iterations, shape[0]), dtype=np.float32)
+        self.__computation_time = np.zeros(nb_iterations, dtype=np.float32)
 
         self.__initialized = False
 
@@ -82,6 +84,7 @@ class Trace:
         self.__sigma_trace = self.__sigma_trace[:self.__iteration_counter]
         self.__accepted = self.__accepted[:self.__iteration_counter]
         self.__rescued = self.__rescued[:self.__iteration_counter]
+        self.__computation_time = self.__computation_time[:self.__iteration_counter]
 
     def store(self,
               position: np.ndarray,
@@ -125,7 +128,8 @@ class Trace:
                rescued: List[bool],
                best_position: np.ndarray,
                best_cost: float,
-               best_index: List[int]) -> None:
+               best_index: List[int],
+               computation_time: float) -> None:
         """
 
 
@@ -134,8 +138,9 @@ class Trace:
         :param costs: the current costs.
         :param rescued: were the walkers rescued at this iteration ?
         :param best_position: best position vector reached since the start of the SA algorithm.
-        :param best_cost: cost associated to the best position
-        :param best_index: tuple (iteration, walker index) associated to the best position
+        :param best_cost: cost associated to the best position.
+        :param best_index: tuple (iteration, walker index) associated to the best position.
+        :param computation_time: time it took to compute this iteration.
         """
         position_index = index + 1 * self.__initialized
 
@@ -156,6 +161,8 @@ class Trace:
         self.__best_position_trace[position_index, self.ndim + 1] = best_index[1]
         self.__best_position_trace[position_index, self.ndim + 2] = self.__n_trace[best_index[0]-1]
 
+        self.__computation_time[index] = computation_time
+
     def reached_convergence(self,
                             tolerance: float) -> bool:
         """
@@ -167,6 +174,12 @@ class Trace:
         """
         if self.__iteration_counter < self.__window_size:
             return False
+
+        # in case of rescue, if all workers end up on the same position, consider it as convergence
+        if np.any(self.__rescued[self.__iteration_counter - 1]):
+            if np.all(np.all(self.__position_trace[self.position_counter - 1] ==
+                             self.__position_trace[self.position_counter - 1][0], axis=1)):
+                return True
 
         mean_window = np.mean(self.__cost_trace[self.position_counter - self.__window_size:self.position_counter])
         RMSD = np.sqrt(np.sum(
@@ -289,12 +302,18 @@ class Trace:
         """
         return self.__accepted, self.__rescued
 
-    def plot_positions(self, true_values: Optional[Sequence[float]] = None, extended: bool = False) -> None:
+    def plot_positions(self,
+                       true_values: Optional[Sequence[float]] = None,
+                       extended: bool = False,
+                       show: bool = True,
+                       save: Optional[Path] = None) -> None:
         """
         Plot reached positions and costs for the vector to optimize along iterations.
 
         :param true_values: an optional sequence of known true values for each dimension of the vector to optimize.
         :param extended: plot additional plots ? (mostly for debugging)
+        :param show: render the plot ? (default True)
+        :param save: optional path to save the plot as an html file.
         """
         if true_values is not None and len(true_values) != self.ndim:
             raise ShapeError(f'The vector of true values should have {self.ndim} dimensions, not {len(true_values)}.')
@@ -431,14 +450,30 @@ class Trace:
         fig['layout'].update(height=200 * (self.ndim + 2), width=600, margin=dict(t=40, b=10, l=10, r=10),
                              xaxis_range=[0, self.nb_positions-1])
 
-        fig.show()
+        if show:
+            fig.show()
 
-    def plot_parameters(self) -> None:
+        if save is not None:
+            fig.write_html(str(save))
+
+    def plot_parameters(self,
+                        extended: bool = False,
+                        show: bool = True,
+                        save: Optional[Path] = None) -> None:
         """
         Plot temperature, number of repeats per iteration and number of averaged function evaluations along iterations.
+
+        :param extended: plot additional plots ? (mostly for debugging)
+        :param show: render the plot ? (default True)
+        :param save: optional path to save the plot as an html file.
         """
-        fig = make_subplots(rows=4, cols=1, shared_xaxes=True,
-                            subplot_titles=("Temperature", "sigma", "n", "Acceptance fraction (%)"),
+        sub_plots = 5 if extended else 4
+        titles = ["Temperature", "sigma", "n", "Acceptance fraction (%)"]
+        if extended:
+            titles.append("Computation time (s)")
+
+        fig = make_subplots(rows=sub_plots, cols=1, shared_xaxes=True,
+                            subplot_titles=titles,
                             vertical_spacing=0.05)
 
         if self.nb_iterations:
@@ -499,13 +534,27 @@ class Trace:
                                      hoverinfo="text",
                                      showlegend=True), row=4, col=1)
 
+            if extended:
+                fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
+                                         y=self.__computation_time,
+                                         name='T',
+                                         hovertext=[f"<b>Time</b>: {_time:.4f}<br>"
+                                                    f"<b>Iteration</b>: {iteration + 1}"
+                                                    for iteration, _time in enumerate(self.__computation_time)],
+                                         hoverinfo="text",
+                                         showlegend=False), row=5, col=1)
+
         fig.update_layout(yaxis4=dict(range=[0, 100]), height=150 * (self.ndim + 1), width=600,
                           margin=dict(t=40, b=10, l=10, r=10))
 
         for i in range(4):
             fig.layout.annotations[i].update(x=0.025, xanchor='left')
 
-        fig.show()
+        if show:
+            fig.show()
+
+        if save is not None:
+            fig.write_html(str(save))
 
 
 @dataclass
@@ -639,7 +688,7 @@ def check_parameters(args: Optional[Sequence],
             if np.any(x0 < bounds[0]) or np.any(x0 > bounds[1]):
                 raise ValueError('Some values in x0 do not lie in between defined bounds.')
 
-        elif isinstance(bounds, collections.Sequence):
+        elif isinstance(bounds, collections.abc.Sequence):
             if len(bounds) != x0.shape[1]:
                 raise ShapeError(f'Bounds must be defined for all dimensions, but only {len(bounds)} out of'
                                  f' {x0.shape[1]} were defined.')
@@ -648,7 +697,6 @@ def check_parameters(args: Optional[Sequence],
                 if isinstance(bound, tuple) and isinstance(bound[0], numbers.Number) and isinstance(bound[1],
                                                                                                     numbers.Number):
                     if np.any(x0[:, dim_index] < bound[0]) or np.any(x0[:, dim_index] > bound[1]):
-                        print(x0[:, dim_index])
                         raise ValueError(f'Some values in x0 do not lie in between defined bounds for dimensions '
                                          f'{dim_index}.')
 

@@ -4,17 +4,17 @@
 
 # ====================================================
 # imports
+import time
 import traceback
 import numpy as np
 from tqdm import tqdm
 from warnings import warn
 from itertools import repeat
 
-
 from typing import Callable, Tuple, Optional, Sequence, Union, Any, List, Type
 
 from .utils import Result, Trace, get_mean_cost, get_vectorized_mean_cost, check_parameters, n, T, sigma
-from .moves import Move, RandomStep, SetStep, parse_moves
+from .moves import Move, RandomStep, SetStep, SetStretch, parse_moves
 from .__mappers import LinearExecutor, VectorizedExecutor, ParallelExecutor
 from .__backup import Backup
 
@@ -35,7 +35,8 @@ def __initialize_sa(args: Optional[Sequence],
                     fun: Callable[[np.ndarray, Any], Union[List[float], float]],
                     nb_cores: int,
                     vectorized: bool,
-                    backup: bool) -> Tuple[
+                    backup: bool,
+                    suppress_warnings: bool) -> Tuple[
     Tuple, np.ndarray, int, int, float, float, float, float, int, List[float], List[Move], np.ndarray,
     List[float], List[int], float, float, float, int, Backup
 ]:
@@ -69,6 +70,7 @@ def __initialize_sa(args: Optional[Sequence],
         just one. (<nb_cores> parameter will be set to 1 in this case.)
     :param backup: use Backup for storing previously computed function evaluations and reusing them when returning to
         the same position vector ? (Only available when using SetStep moves).
+    :param suppress_warnings: remove warnings ?
 
     :return: Valid parameters and initial values.
     """
@@ -79,7 +81,7 @@ def __initialize_sa(args: Optional[Sequence],
 
     window_size = max(1, min(50, int(0.1 * max_iter)))
 
-    if max_iter < 200:
+    if not suppress_warnings and max_iter < 200:
         warn('It is not recommended running the SA algorithm with less than 200 iterations.')
 
     # get moves and associated probabilities
@@ -88,7 +90,7 @@ def __initialize_sa(args: Optional[Sequence],
     using_SetStep = False
 
     for move in list_moves:
-        if isinstance(move, SetStep):
+        if isinstance(move, (SetStep, SetStretch)):
             using_SetStep = True
 
         move.set_bounds(bounds)
@@ -133,7 +135,9 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
        nb_cores: int = 1,
        vectorized: bool = False,
        backup: bool = False,
-       seed: int = 42) -> Result:
+       seed: int = 42,
+       verbose: bool = True,
+       suppress_warnings: bool = False) -> Result:
     """
     Simulated Annealing for minimizing noisy cost functions.
 
@@ -165,6 +169,8 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
     :param backup: use Backup for storing previously computed function evaluations and reusing them when returning to
         the same position vector ? (Only available when using SetStep moves).
     :param seed: a seed for the random generator.
+    :param verbose: print progress bar ? (default True)
+    :param suppress_warnings: remove warnings ? (default False)
 
     :return: a Result object.
     """
@@ -173,17 +179,20 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
     args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, window_size, \
         list_probabilities, list_moves, x, costs, last_ns, T_final, alpha, sigma_max, nb_cores, backup_storage = \
         __initialize_sa(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol,
-                        moves, bounds, fun, nb_cores, vectorized, backup)
+                        moves, bounds, fun, nb_cores, vectorized, backup, suppress_warnings)
 
     # initialize the trace history keeper
     trace = Trace(max_iter, x0.shape, window_size=window_size)
     trace.initialize(x, costs)
 
-    progress_bar = tqdm(range(max_iter), unit='iteration')
+    if verbose:
+        progress_bar = tqdm(range(max_iter), unit='iteration')
+    else:
+        progress_bar = range(max_iter)
 
     if vectorized:
         executor: Union[Type[VectorizedExecutor], Type[ParallelExecutor], Type[LinearExecutor]] = VectorizedExecutor
-    elif nb_cores > 1:
+    elif nb_cores >= 1:
         executor = ParallelExecutor
     else:
         executor = LinearExecutor
@@ -192,6 +201,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
     with executor(max_workers=nb_cores) as ex:
         try:
             for iteration in progress_bar:
+                start = time.time()
 
                 temperature = T(iteration, T_0, alpha)
                 current_n = n(iteration, max_measures, sigma_max, T_0, alpha, epsilon)
@@ -199,7 +209,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
                 rescued = [False for _ in range(nb_walkers)]
 
                 updates = ex.map(fun,
-                                 x,
+                                 x.copy(),
                                  costs,
                                  repeat(current_n),
                                  last_ns,
@@ -209,7 +219,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
                                  repeat(iteration),
                                  repeat(max_iter),
                                  repeat(temperature),
-                                 positions=x,
+                                 positions=x.copy(),
                                  backup=backup_storage)
 
                 for _x, _cost, _last_n, _accepted, _walker_index in updates:
@@ -233,16 +243,17 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
                         accepted[_walker_index] = True
                         rescued[_walker_index] = True
 
-                trace.update(index, x, costs, rescued, best_position, best_cost, best_index)
+                trace.update(index, x, costs, rescued, best_position, best_cost, best_index, time.time() - start)
 
-                progress_bar.set_description(f"T: "
-                                             f"{temperature:.4f}"
-                                             f"%  A: "
-                                             f"{trace.mean_acceptance_fraction()*100:.4f}%"
-                                             f"  Best: "
-                                             f"{trace.get_best()[1]:.4f}"
-                                             f"  Current: "
-                                             f"{np.min(costs):.4f}")
+                if verbose:
+                    progress_bar.set_description(f"T: "
+                                                 f"{temperature:.4f}"
+                                                 f"  A: "
+                                                 f"{trace.mean_acceptance_fraction()*100:.4f}%"
+                                                 f"  Best: "
+                                                 f"{trace.get_best()[1]:.4f}"
+                                                 f"  Current: "
+                                                 f"{np.min(costs):.4f}")
 
                 if trace.reached_convergence(tol):
                     message, success = 'Convergence tolerance reached.', True
