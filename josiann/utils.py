@@ -32,7 +32,7 @@ class Trace:
 
     def __init__(self,
                  nb_iterations: int,
-                 shape: Tuple[int, int],
+                 shape: Tuple[int, ...],
                  window_size: int):
         self.__position_trace = np.zeros((nb_iterations, shape[0], shape[1]), dtype=np.float32)
         self.__best_position_trace = np.zeros((nb_iterations, shape[1]+3), dtype=np.float32)

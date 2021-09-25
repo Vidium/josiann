@@ -27,4 +27,4 @@ steps:
   image: real_env
   pull: never
   commands:
-    - python -m pytest -v ./tests/test_sa.py
+    - python -m pytest -v -m "not multicores" ./tests/test_sa.py
