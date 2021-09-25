@@ -10,12 +10,6 @@ clone:
     - echo
 
 steps:
-#- name: pytest
-#  image: real_env
-#  pull: never
-#  commands:
-#    - pytest ./tests
-
 - name: flake8
   image: real_env
   pull: never
@@ -28,3 +22,9 @@ steps:
   failure: ignore
   commands:
     - mypy --config-file .mypy.ini ./josiann
+
+- name: pytest
+  image: real_env
+  pull: never
+  commands:
+    - python -m pytest -v ./tests/test_sa.py

@@ -91,7 +91,11 @@ class RandomStep(Move):
 
         :return: new proposed vector x of shape (ndim,)
         """
-        return self._valid_proposal(x + self.__magnitude * (np.random.random(len(x)) - 0.5))
+        target_dim = np.random.randint(len(x))
+        increment = np.zeros(len(x))
+        increment[target_dim] = self.__magnitude * (np.random.random() - 0.5)
+
+        return self._valid_proposal(x + increment)
 
 
 class SetStep(Move):
@@ -126,22 +130,22 @@ class SetStep(Move):
 
         :return: new proposed vector x of shape (ndim,)
         """
-        new_x = np.zeros(len(x))
+        target_dim = np.random.randint(len(x))
+        new_x = x.copy()
 
-        for ndim in range(len(x)):
-            if np.random.rand() > 0.5:
-                mask = self.__position_set[ndim] > x[ndim]
-                if np.any(mask):
-                    new_x[ndim] = self.__position_set[ndim][np.argmax(mask)]
-                else:
-                    new_x[ndim] = x[ndim]
-
+        if np.random.rand() > 0.5:
+            mask = self.__position_set[target_dim] > x[target_dim]
+            if np.any(mask):
+                new_x[target_dim] = self.__position_set[target_dim][np.argmax(mask)]
             else:
-                mask = self.__reversed_position_set[ndim] < x[ndim]
-                if np.any(mask):
-                    new_x[ndim] = self.__reversed_position_set[ndim][np.argmax(mask)]
-                else:
-                    new_x[ndim] = x[ndim]
+                new_x[target_dim] = x[target_dim]
+
+        else:
+            mask = self.__reversed_position_set[target_dim] < x[target_dim]
+            if np.any(mask):
+                new_x[target_dim] = self.__reversed_position_set[target_dim][np.argmax(mask)]
+            else:
+                new_x[target_dim] = x[target_dim]
 
         return self._valid_proposal(new_x)
 
@@ -172,6 +176,39 @@ class Metropolis(Move):
         :return: new proposed vector x of shape (ndim,)
         """
         return self._valid_proposal(np.random.multivariate_normal(x, self.__cov))
+
+
+class Metropolis1D(Move):
+    """
+    Metropolis step obtained from a univariate normal distribution with mean <x> and variance <variance>
+
+    :param variance: the variance.
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    """
+
+    def __init__(self,
+                 variance: float,
+                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+        super().__init__(bounds=bounds)
+        self.__var = float(variance)
+
+    def get_proposal(self,
+                     x: np.ndarray,
+                     state: State) -> np.ndarray:
+        """
+        Generate a new proposed vector x.
+
+        :param x: current vector x of shape (ndim,)
+        :param state: current state of the SA algorithm.
+
+        :return: new proposed vector x of shape (ndim,)
+        """
+        target_dim = np.random.randint(len(x))
+        x[target_dim] = np.random.normal(x[target_dim], self.__var)
+
+        proposal = self._valid_proposal(x)
+
+        return proposal
 
 
 # Moves depending on other walkers
@@ -262,6 +299,64 @@ class StretchAdaptive(Stretch):
         z = self._sample_z(a)
         # move
         return self._valid_proposal(x_j + z * (x - x_j))
+
+
+class SetStretch(Stretch):
+    """
+    Fusion of the Set and Stretch moves. We exploit multiple walkers in parallel an move each to the closest point
+        in the set of possible positions instead of the point proposed by the stretch.
+
+    :param position_set: sets of only possible values for x in each dimension.
+    :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
+        while bigger values make samples more spread out with a peak getting closer to 0.
+    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    """
+
+    def __init__(self,
+                 position_set: Sequence[Sequence[float]],
+                 a: float = 2.,
+                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+        super().__init__(a=a, bounds=bounds)
+
+        self.__position_set = [np.sort(p) for p in position_set]
+
+    def _find_nearest(self,
+                      vector: np.ndarray):
+        """
+        Find nearest values in <array> for each element in <vector>.
+
+        :param array: an array of allowed values.
+        :param vector: an array of values for which to find nearest values.
+
+        :return: an array with nearest values from <vector> in <array>.
+        """
+        for index in range(len(vector)):
+            vector[index] = self.__position_set[index][np.nanargmin(np.abs(self.__position_set[index] - vector[index]))]
+
+        return vector
+
+    def get_proposal(self,
+                     x: np.ndarray,
+                     state: State) -> np.ndarray:
+        """
+        Generate a new proposed vector x.
+
+        :param x: current vector x of shape (ndim,)
+        :param state: current state of the SA algorithm.
+
+        :return: new proposed vector x of shape (ndim,)
+        """
+        # pick X_j at random from the complementary set
+        x_j = state.complementary_set[np.random.randint(0, len(state.complementary_set))]
+        # sample z
+        r = state.iteration / state.max_iter
+        a = (1.5 - self._a) * r + self._a
+        z = self._sample_z(a)
+
+        proposal = x_j + z * (x - x_j)
+
+        # move
+        return self._valid_proposal(self._find_nearest(proposal))
 
 
 # functions
