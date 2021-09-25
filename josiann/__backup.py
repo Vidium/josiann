@@ -32,9 +32,9 @@ class Backup:
         :param position: position vector of the function evaluations.
         :param evaluation: function evaluation: number of evaluations, mean of evaluations.
         """
-        position = tuple(position)
+        position_tuple = tuple(position)
         if self.active:
-            self.__backup_array[position] = evaluation
+            self.__backup_array[position_tuple] = evaluation
 
     def get_previous_evaluations(self, position: np.ndarray) -> Tuple[int, float]:
         """

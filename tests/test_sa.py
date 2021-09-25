@@ -4,6 +4,7 @@
 
 # ====================================================
 # imports
+import pytest
 import numpy as np
 
 from typing import List, Callable
@@ -128,6 +129,7 @@ def test_SetStretch():
 
 
 # multi cores =================================================================
+@pytest.mark.multicores
 def test_parallel():
     print('Test parallel')
     res = run_sa(Stretch(bounds=BOUNDS),

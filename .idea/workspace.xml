@@ -1,18 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed issue in getting best position">
-      <change afterPath="$PROJECT_DIR$/tests/test_1.ipynb" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/tests/test_sa.py" afterDir="false" />
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed convergence detection, Metropolis1D, multiprocessing">
+      <change afterPath="$PROJECT_DIR$/test.sh" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.drone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.drone.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__mappers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/moves.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/__backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__backup.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/test/test_1.ipynb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tests/test_sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_sa.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -162,7 +156,7 @@
       <workItem from="1628335038431" duration="1201000" />
       <workItem from="1629876205260" duration="11682000" />
       <workItem from="1629902367472" duration="25000" />
-      <workItem from="1632564064344" duration="14741000" />
+      <workItem from="1632564064344" duration="16102000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -213,7 +207,14 @@
       <option name="project" value="LOCAL" />
       <updated>1629894949493</updated>
     </task>
-    <option name="localTasksCounter" value="8" />
+    <task id="LOCAL-00008" summary="fixed convergence detection, Metropolis1D, multiprocessing">
+      <created>1632583272695</created>
+      <option name="number" value="00008" />
+      <option name="presentableId" value="LOCAL-00008" />
+      <option name="project" value="LOCAL" />
+      <updated>1632583272695</updated>
+    </task>
+    <option name="localTasksCounter" value="9" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -240,6 +241,7 @@
     <MESSAGE value="fixed error on cost normalization + rescue points now visible on position graph" />
     <MESSAGE value="fixed some bugs on best cost computation" />
     <MESSAGE value="fixed issue in getting best position" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed issue in getting best position" />
+    <MESSAGE value="fixed convergence detection, Metropolis1D, multiprocessing" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed convergence detection, Metropolis1D, multiprocessing" />
   </component>
 </project>
