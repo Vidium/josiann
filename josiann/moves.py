@@ -10,7 +10,7 @@ or walker-dependent.
 
 # ====================================================
 # imports
-import collections
+import collections.abc
 import numpy as np
 from abc import ABC, abstractmethod
 
@@ -375,7 +375,7 @@ def parse_moves(moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]]
 
     :return: the list of probabilities and the list of associated moves.
     """
-    if not isinstance(moves, collections.Sequence) or isinstance(moves, str):
+    if not isinstance(moves, collections.abc.Sequence) or isinstance(moves, str):
         if isinstance(moves, Move):
             if issubclass(type(moves), EnsembleMove) and nb_walkers < 2:
                 raise ValueError('Ensemble moves require at least 2 walkers to be used.')

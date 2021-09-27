@@ -1,17 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed convergence detection, Metropolis1D, multiprocessing">
-      <change afterPath="$PROJECT_DIR$/.pylintrc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.drone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.drone.yml" afterDir="false" />
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker">
+      <change afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/__backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__backup.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__mappers.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/moves.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/name_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/name_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_sa.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -167,7 +159,7 @@
       <workItem from="1632564064344" duration="16102000" />
       <workItem from="1632672980169" duration="881000" />
       <workItem from="1632725980637" duration="6005000" />
-      <workItem from="1632734113473" duration="4396000" />
+      <workItem from="1632734113473" duration="4738000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -225,7 +217,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632583272695</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker">
+      <created>1632743292547</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1632743292547</updated>
+    </task>
+    <option name="localTasksCounter" value="10" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -253,6 +252,7 @@
     <MESSAGE value="fixed some bugs on best cost computation" />
     <MESSAGE value="fixed issue in getting best position" />
     <MESSAGE value="fixed convergence detection, Metropolis1D, multiprocessing" />
-    <option name="LAST_COMMIT_MESSAGE" value="fixed convergence detection, Metropolis1D, multiprocessing" />
+    <MESSAGE value="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker" />
+    <option name="LAST_COMMIT_MESSAGE" value="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker" />
   </component>
 </project>
