@@ -13,6 +13,7 @@ steps:
 - name: flake8
   image: real_env
   pull: never
+  failure: ignore
   commands:
     - flake8 --config .tox.ini ./josiann
 
@@ -22,6 +23,13 @@ steps:
   failure: ignore
   commands:
     - mypy --config-file .mypy.ini ./josiann
+
+- name: pylint
+  image: real_env
+  pull: never
+  failure: ignore
+  commands:
+  - pylint ./josiann
 
 - name: pytest
   image: real_env

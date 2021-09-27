@@ -2,6 +2,10 @@
 # Created on 05/08/2021 11:22
 # Author : matteo
 
+"""
+Backup class for storing previously computed costs at visited position vectors.
+"""
+
 # ====================================================
 # imports
 import numpy as np
@@ -48,17 +52,28 @@ class Backup:
 
 
 class BackupManager(BaseManager):
-    pass
+    """
+    Manager for passing the Backup objects during multiprocessing.
+    """
 
 
 class BackupProxy(NamespaceProxy):
+    """
+    Proxy for accessing methods of the Backup objects during multiprocessing.
+    """
     _exposed_ = ('__getattribute__', '__setattr__', '__delattr__', 'save', 'get_previous_evaluations')
 
     def save(self, position: np.ndarray, evaluation: Tuple[int, float]) -> None:
+        """
+        Proxy for Backup.save() method.
+        """
         callmethod = object.__getattribute__(self, '_callmethod')
         return callmethod(self.save.__name__, (position, evaluation))
 
     def get_previous_evaluations(self, position: np.ndarray) -> Tuple[int, float]:
+        """
+        Proxy for Backup.get_previous_evaluations() method.
+        """
         callmethod = object.__getattribute__(self, '_callmethod')
         return callmethod(self.get_previous_evaluations.__name__, (position,))
 

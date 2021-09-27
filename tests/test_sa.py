@@ -7,7 +7,7 @@
 import pytest
 import numpy as np
 
-from typing import List, Callable
+from typing import List, Callable, Optional
 
 from josiann import sa, Result, Move, RandomStep, Metropolis, Metropolis1D, SetStep, Stretch, StretchAdaptive, \
     SetStretch
@@ -31,7 +31,8 @@ def run_sa(move: Move,
            nb_walkers: int = 1,
            nb_cores: int = 1,
            vectorized: bool = False,
-           backup: bool = False) -> Result:
+           backup: bool = False,
+           nb_slots: Optional[int] = None) -> Result:
     seed = 42
     np.random.seed(seed)
 
@@ -43,7 +44,7 @@ def run_sa(move: Move,
              moves=move,
              nb_walkers=nb_walkers,
              max_iter=200,
-             max_measures=20000,
+             max_measures=1000,
              final_acceptance_probability=1e-300,
              epsilon=0.001,
              T_0=5,
@@ -51,6 +52,7 @@ def run_sa(move: Move,
              nb_cores=nb_cores,
              vectorized=vectorized,
              backup=backup,
+             nb_slots=nb_slots,
              seed=seed)
 
     assert res.nb_cores == nb_cores, print(res.nb_cores)
@@ -69,25 +71,25 @@ def test_RandomStep():
                             bounds=BOUNDS),
                  cost_func=cost_function)
 
-    assert np.allclose(res.x, [0, 0.5], atol=3e-1), print(res.x)
+    assert np.allclose(res.x, [0, 0.5], atol=3e-1), res.x
 
 
 def test_Metropolis():
     print('Test Metropolis')
-    res = run_sa(Metropolis(variances=np.array([0.1, 0.1]),
+    res = run_sa(Metropolis(variances=np.array([0.2, 0.2]),
                             bounds=BOUNDS),
                  cost_func=cost_function)
 
-    assert np.allclose(res.x, [0, 0.5], atol=3e-1), print(res.x)
+    assert np.allclose(res.x, [0, 0.5], atol=3e-1), res.x
 
 
 def test_Metropolis1D():
     print('Test Metropolis1D')
-    res = run_sa(Metropolis1D(variance=1,
+    res = run_sa(Metropolis1D(variance=0.2,
                               bounds=BOUNDS),
                  cost_func=cost_function)
 
-    assert np.allclose(res.x, [0, 0.5], atol=3e-1), print(res.x)
+    assert np.allclose(res.x, [0, 0.5], atol=3e-1), res.x
 
 
 def test_SetStep():
@@ -96,7 +98,7 @@ def test_SetStep():
                          bounds=BOUNDS),
                  cost_func=cost_function)
 
-    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], print(res.x)
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
 # MULTIPLE walkers ------------------------------------------------------------
@@ -106,7 +108,7 @@ def test_Stretch():
                  cost_func=cost_function,
                  nb_walkers=5)
 
-    assert np.allclose(res.x, [0, 0.5], atol=3e-1), print(res.x)
+    assert np.allclose(res.x, [0, 0.5], atol=3e-1), res.x
 
 
 def test_StretchAdaptive():
@@ -115,7 +117,7 @@ def test_StretchAdaptive():
                  cost_func=cost_function,
                  nb_walkers=5)
 
-    assert np.allclose(res.x, [0, 0.5], atol=3e-1), print(res.x)
+    assert np.allclose(res.x, [0, 0.5], atol=3e-1), res.x
 
 
 def test_SetStretch():
@@ -125,10 +127,11 @@ def test_SetStretch():
                  cost_func=cost_function,
                  nb_walkers=5)
 
-    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], print(res.x)
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
 # multi cores =================================================================
+# REMINDER : this must be launched in terminal as 'python -m tests.test_sa' to get through the if __name__ == '__main__'
 @pytest.mark.multicores
 def test_parallel():
     print('Test parallel')
@@ -137,27 +140,46 @@ def test_parallel():
                  nb_walkers=5,
                  nb_cores=5)
 
-    assert np.allclose(res.x, [0, 0.5], atol=3e-1), print(res.x)
+    assert np.allclose(res.x, [0, 0.5], atol=3e-1), res.x
 
 
 # vectorized ==================================================================
 def test_vectorized():
     print('Test vectorized')
-    _ = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
-                       bounds=BOUNDS),
-               cost_func=vectorized_cost_function,
-               nb_walkers=5,
-               vectorized=True)
+    res = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
+                         bounds=BOUNDS),
+                 cost_func=vectorized_cost_function,
+                 nb_walkers=5,
+                 vectorized=True)
+
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
 # with backup =================================================================
 def test_backup():
     print('Test backup')
-    _ = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
-                       bounds=BOUNDS),
-               cost_func=cost_function,
-               nb_walkers=5,
-               backup=True)
+    res = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
+                         bounds=BOUNDS),
+                 cost_func=vectorized_cost_function,
+                 nb_walkers=5,
+                 vectorized=True,
+                 backup=True)
+
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
+
+
+# multi slots =================================================================
+def test_slots():
+    print('Test slots')
+    res = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
+                         bounds=BOUNDS),
+                 cost_func=vectorized_cost_function,
+                 nb_walkers=5,
+                 vectorized=True,
+                 backup=True,
+                 nb_slots=50)
+
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
 if __name__ == '__main__':
@@ -171,3 +193,4 @@ if __name__ == '__main__':
     test_parallel()
     test_vectorized()
     test_backup()
+    test_slots()

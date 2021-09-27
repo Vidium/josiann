@@ -2,9 +2,14 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed convergence detection, Metropolis1D, multiprocessing">
-      <change afterPath="$PROJECT_DIR$/test.sh" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.pylintrc" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.drone.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.drone.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/__backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__backup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__mappers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/moves.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/name_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/name_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_sa.py" afterDir="false" />
     </list>
@@ -46,8 +51,8 @@
     <setting file="file://$PROJECT_DIR$/.drone.yml" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/utils.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/.drone.yml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="notebook:///home/matteo/git/vdata/tests/fix_vdata.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../Real_platform/app/pages/home/callbacks/home_main_callbacks.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/josiann/tests/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/tests/tests_vdata/test_VData_read.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_read_write/read.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../Real_platform/app/pages/home/layout/home.py" root0="FORCE_HIGHLIGHTING" />
@@ -55,10 +60,10 @@
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/vdataframe.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/__backup.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/indexers.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="notebook:///home/matteo/git/josiann/tests/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/__mappers.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/views/dataframe.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/vdata/tests/fix_vdata.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/moves.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/utils.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/sa.py" root0="FORCE_HIGHLIGHTING" />
@@ -119,6 +124,9 @@
       <module name="josiann" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
       <option name="SDK_HOME" value="$USER_HOME$/anaconda3/envs/pyREAL/bin/python" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
       <option name="IS_MODULE_SDK" value="false" />
@@ -157,6 +165,9 @@
       <workItem from="1629876205260" duration="11682000" />
       <workItem from="1629902367472" duration="25000" />
       <workItem from="1632564064344" duration="16102000" />
+      <workItem from="1632672980169" duration="881000" />
+      <workItem from="1632725980637" duration="6005000" />
+      <workItem from="1632734113473" duration="4396000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>

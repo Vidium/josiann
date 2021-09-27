@@ -2,6 +2,13 @@
 # Created on 03/08/2021 12:21
 # Author : matteo
 
+"""
+Defines executors for updating the position vectors by calling moves and computing the costs:
+    LinearExecutor: sequential updates
+    VectorizedExecutor: updates all at once in matrix of positions
+    ParallelExecutor: parallel updates
+"""
+
 # ====================================================
 # imports
 import numpy as np
@@ -11,7 +18,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 from typing import Callable, Any, Tuple, List, Iterable, Sequence, Iterator, cast
 
-from .utils import State, get_mean_cost, get_vectorized_mean_cost, acceptance_log_probability
+from .utils import State, get_mean_cost, get_vectorized_mean_cost, acceptance_log_probability, get_exploration_plan
 from .moves import Move
 from .__backup import Backup, BackupManager
 
@@ -29,6 +36,8 @@ def _update_walker(fun: Callable[[np.ndarray, Any], float],
                    iteration: int,
                    max_iter: int,
                    temperature: float,
+                   _nb_slots: int,
+                   _acceptance: float,
                    complementary_set: np.ndarray,
                    backup_storage: Backup,
                    walker_index: int) -> Tuple[np.ndarray, float, int, bool, int]:
@@ -47,7 +56,10 @@ def _update_walker(fun: Callable[[np.ndarray, Any], float],
     :param iteration: the current iteration number.
     :param max_iter: the maximum number of iterations.
     :param temperature: the current temperature.
+    :param _nb_slots: NOT USED HERE.
+    :param _acceptance: NOT USED HERE.
     :param complementary_set: the set of position vectors from walkers other than the one to update.
+    :param backup_storage: a Backup object for storing previously computed positions.
     :param walker_index: the index of the walker to update.
 
     :return: the updated position vector, cost, number of evaluations and whether the move was accepted.
@@ -82,6 +94,8 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
                               iteration: int,
                               max_iter: int,
                               temperature: float,
+                              nb_slots: List[int],
+                              acceptance: float,
                               backup_storage: Backup) -> Iterator[Tuple[np.ndarray, float, int, bool, int]]:
     """
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
@@ -99,33 +113,53 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
     :param iteration: the current iteration number.
     :param max_iter: the maximum number of iterations.
     :param temperature: the current temperature.
+    :param nb_slots: the list of slots per walker.
+    :param acceptance: the current acceptance fraction.
+    :param backup_storage: a Backup object for storing previously computed positions.
 
     :return: an iterator over the updated position vectors, costs, number of evaluations and whether the move were
         accepted.
     """
-    # pick a move at random from available moves
-    moves = np.random.choice(list_moves, size=len(x), p=list_probabilities)
-
     states = [State(complementary_set=np.delete(x, walker_index), iteration=iteration, max_iter=max_iter)
               for walker_index in range(len(x))]
 
     # generate a new proposal as a neighbor of x and get its cost
-    proposed_positions = np.array([move.get_proposal(x[walker_index], state)
-                                   for walker_index, (move, state) in enumerate(zip(moves, states))])
-    previous_evaluations = [backup_storage.get_previous_evaluations(proposed_positions[walker_index])
-                            for walker_index, move in enumerate(moves)]
-    proposed_costs = get_vectorized_mean_cost(fun, proposed_positions, current_n, args, previous_evaluations)
-    for walker_index, move in enumerate(moves):
-        backup_storage.save(proposed_positions[walker_index], (current_n, proposed_costs[walker_index]))
+    proposed_positions = np.array([get_exploration_plan(acceptance, nb_slots[walker_index], x[walker_index],
+                                                        list_moves, list_probabilities,
+                                                        states[walker_index], [])[2]
+                                   for walker_index in range(len(x))]).reshape(sum(nb_slots), x.shape[1])
 
-    results = ((proposed_positions[walker_index], proposed_costs[walker_index], current_n, True, walker_index)
-               if acceptance_log_probability(costs[walker_index] * current_n / last_ns[walker_index],
-                                             proposed_costs[walker_index],
-                                             temperature) > np.log(np.random.random()) else
-               (x[walker_index], costs[walker_index], last_ns[walker_index], False, walker_index)
-               for walker_index in range(len(x)))
+    unique_proposed_positions = np.unique(proposed_positions, axis=0)
 
-    return results
+    previous_evaluations = [backup_storage.get_previous_evaluations(unique_proposed_positions[index])
+                            for index in range(len(unique_proposed_positions))]
+
+    unique_proposed_costs = get_vectorized_mean_cost(fun, unique_proposed_positions, current_n, args,
+                                                     previous_evaluations)
+
+    proposed_costs = np.zeros(len(proposed_positions))
+    for i, cost in enumerate(unique_proposed_costs):
+        proposed_costs[np.all(proposed_positions == unique_proposed_positions[i], axis=1)] = cost
+
+        backup_storage.save(unique_proposed_positions[i], (current_n, cost))
+
+    results = []
+
+    for walker_index, walker_position in enumerate(x):
+        best_index = np.argmin(proposed_costs[walker_index * nb_slots[walker_index]:
+                                              (walker_index + 1) * nb_slots[walker_index]])
+
+        if acceptance_log_probability(costs[walker_index] * current_n / last_ns[walker_index],
+                                      proposed_costs[walker_index * nb_slots[walker_index] + best_index],
+                                      temperature) > np.log(np.random.random()):
+            results.append((proposed_positions[walker_index * nb_slots[walker_index] + best_index],
+                            proposed_costs[walker_index * nb_slots[walker_index] + best_index],
+                            current_n, True, walker_index))
+
+        else:
+            results.append((walker_position, costs[walker_index], last_ns[walker_index], False, walker_index))
+
+    return iter(results)
 
 
 class Executor(ABC):
@@ -155,7 +189,6 @@ class Executor(ABC):
 
         :return: an iterator over map(fn, *iter).
         """
-        pass
 
 
 class LinearExecutor(Executor):
@@ -211,6 +244,8 @@ class VectorizedExecutor(Executor):
                                          iteration=cast(int, next(iterables[7])),                       # type: ignore
                                          max_iter=cast(int, next(iterables[8])),                        # type: ignore
                                          temperature=cast(float, next(iterables[9])),                   # type: ignore
+                                         nb_slots=cast(int, next(iterables[10])),                       # type: ignore
+                                         acceptance=cast(float, next(iterables[11])),                   # type: ignore
                                          backup_storage=kwargs['backup'])
 
 
@@ -220,7 +255,7 @@ class ParallelExecutor(ProcessPoolExecutor):
     """
 
     def __init__(self, max_workers: int):
-        super(ParallelExecutor, self).__init__(max_workers=max_workers)
+        super().__init__(max_workers=max_workers)
         self.manager = BackupManager()
         self.manager.start()
         self.backup = self.manager.Backup()                                                     # type: ignore

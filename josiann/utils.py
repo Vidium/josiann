@@ -2,6 +2,15 @@
 # Created on 26/07/2021 12:08
 # Author : matteo
 
+"""
+Classes:
+    Trace: object for storing the SA history per walker.
+    State: object for storing the state of the SA at a particular instant.
+    Result: object for storing the final SA result.
+
+Also defines general utils functions.
+"""
+
 # ====================================================
 # imports
 import numbers
@@ -14,9 +23,12 @@ from multiprocessing import cpu_count
 from dataclasses import dataclass, field
 from plotly.subplots import make_subplots
 
-from typing import Union, Sequence, Tuple, List, Callable, Optional
+from typing import Union, Sequence, Tuple, List, Callable, Optional, TYPE_CHECKING
 
 from .name_utils import ShapeError
+
+if TYPE_CHECKING:
+    from .moves import Move
 
 
 # ====================================================
@@ -233,14 +245,29 @@ class Trace:
 
     @property
     def nb_positions(self) -> int:
+        """
+        Get the number of saved positions.
+
+        :return: The number of saved positions.
+        """
         return self.__position_trace.shape[0]
 
     @property
     def nb_iterations(self) -> int:
+        """
+        Get the number of elapsed iterations.
+
+        :return: The number of elapsed iterations.
+        """
         return self.__temperature_trace.shape[0]
 
     @property
     def position_counter(self) -> int:
+        """
+        Get the position pointer for saving new positions.
+
+        :return: The position pointer.
+        """
         return self.__iteration_counter + 1 * self.__initialized
 
     def get_best(self) -> Tuple[np.ndarray, float, List[int]]:
@@ -419,7 +446,7 @@ class Trace:
                                                 f"<b>Iteration</b>: {iteration}"
                                                 for iteration, position in enumerate(self.__best_position_trace[:, d])],
                                      hoverinfo="text",
-                                     showlegend=True if d == 0 else False,
+                                     showlegend=d == 0,
                                      legendgroup='Best cost'), row=d + supp_plots + 1, col=1)
 
             if true_values is not None:
@@ -715,13 +742,13 @@ def check_parameters(args: Optional[Sequence],
 
     if max_iter < 0:
         raise ValueError("'max_iter' parameter must be positive.")
-    else:
-        max_iter = int(max_iter)
+
+    max_iter = int(max_iter)
 
     if max_measures < 0:
         raise ValueError("'max_measures' parameter must be positive.")
-    else:
-        max_measures = int(max_measures)
+
+    max_measures = int(max_measures)
 
     if final_acceptance_probability < 0 or final_acceptance_probability > 1:
         raise ValueError(f"Invalid value '{final_acceptance_probability}' for 'final_acceptance_probability', "
@@ -732,8 +759,8 @@ def check_parameters(args: Optional[Sequence],
 
     if T_0 < 0:
         raise ValueError("'T_0' parameter must be at least 0.")
-    else:
-        T_0 = float(T_0)
+
+    T_0 = float(T_0)
 
     if tol <= 0:
         raise ValueError("'tol' parameter must be strictly positive.")
@@ -743,10 +770,11 @@ def check_parameters(args: Optional[Sequence],
 
     if nb_cores < 1:
         raise ValueError('Cannot use less than one core.')
-    elif nb_cores > cpu_count():
+
+    if nb_cores > cpu_count():
         raise ValueError(f"Cannot use more than available CPUs ({cpu_count()}).")
-    else:
-        nb_cores = int(nb_cores)
+
+    nb_cores = int(nb_cores)
 
     return args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, nb_cores
 
@@ -789,14 +817,13 @@ def get_vectorized_mean_cost(fun: Callable,
 
     :return: the mean of function evaluations at x.
     """
-    # TODO : compare speed when vectorizing on walkers instead of n
     evaluations = [0. for _ in range(len(x))]
 
-    for walker_index in range(len(x)):
+    for walker_index, walker_position in enumerate(x):
         last_n, last_mean = previous_evaluations[walker_index]
         remaining_n = _n - last_n
         evaluations[walker_index] = last_mean * last_n / _n + \
-            sum(fun(np.tile(x[walker_index], (remaining_n, 1)), *args)) / _n
+            sum(fun(np.tile(walker_position, (remaining_n, 1)), *args)) / _n
 
     return evaluations
 
@@ -870,3 +897,59 @@ def T(k: int,
     :return: the temperature.
     """
     return T_0 * alpha ** k
+
+
+def get_slots_per_walker(slots: int,
+                         nb_walkers: int) -> List[int]:
+    """
+    Assign to each walker an approximately equal number of slots.
+
+    :param slots: the total number of available slots.
+    :param nb_walkers: the number of walkers.
+
+    :return: the number of slots per walker.
+    """
+    per_walker, plus_one = divmod(slots, nb_walkers)
+
+    return [per_walker + 1 for _ in range(plus_one)] + [per_walker for _ in range(nb_walkers - plus_one)]
+
+
+def get_exploration_plan(acceptance: float,
+                         nb_slots: int,
+                         x: np.ndarray,
+                         list_moves: List['Move'],
+                         list_probabilities: List[float],
+                         state: State,
+                         plan: List[np.ndarray]) -> Tuple[int, int, List[np.ndarray]]:
+    """
+    Define an exploration plan : a set of moves (of size <nb_slots>) to take from an initial position vector <x>.
+    For low acceptance values, the moves are mostly picked around the original position vector in a star pattern.
+    For high acceptance values, since the probability of a move being accepted is higher, moves are taken more
+        sequentially.
+
+    :param acceptance: the current proportion of accepted moves.
+    :param nb_slots: the size of the exploration plan (number of moves to take).
+    :param x: the current position vector of shape (ndim,)
+    :param list_moves: the list of possible moves from which to choose.
+    :param list_probabilities: the associated probabilities.
+    :param state: the current state of the SA algorithm.
+    :param plan: the exploration plan, as a list of position vectors.
+
+    :return: the number of used slots, the number of slots left, the exploration plan.
+    """
+    used = max(int(np.ceil((1-acceptance) * nb_slots)), 1)
+    left = nb_slots - used
+
+    for _ in range(used):
+        move = np.random.choice(list_moves, p=list_probabilities)
+        proposal = move.get_proposal(x, state)
+        plan.append(proposal)
+
+        if left > 0:
+            used_after, *_ = get_exploration_plan(acceptance, int(np.ceil(left/used)), proposal,
+                                                  list_moves, list_probabilities,
+                                                  State(state.complementary_set, state.iteration + 1, state.max_iter),
+                                                  plan)
+            left -= used_after
+
+    return used, left, plan
