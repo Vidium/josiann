@@ -221,7 +221,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
 
     if vectorized:
         executor: Union[Type[VectorizedExecutor], Type[ParallelExecutor], Type[LinearExecutor]] = VectorizedExecutor
-    elif nb_cores >= 1:
+    elif nb_cores > 1:
         executor = ParallelExecutor
     else:
         executor = LinearExecutor

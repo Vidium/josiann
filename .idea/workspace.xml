@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker">
-      <change afterPath="$PROJECT_DIR$/pytest.ini" afterDir="false" />
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="minor fix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -159,7 +158,7 @@
       <workItem from="1632564064344" duration="16102000" />
       <workItem from="1632672980169" duration="881000" />
       <workItem from="1632725980637" duration="6005000" />
-      <workItem from="1632734113473" duration="4738000" />
+      <workItem from="1632734113473" duration="5295000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -224,7 +223,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632743292547</updated>
     </task>
-    <option name="localTasksCounter" value="10" />
+    <task id="LOCAL-00010" summary="minor fix">
+      <created>1632743568883</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1632743568883</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -253,6 +259,7 @@
     <MESSAGE value="fixed issue in getting best position" />
     <MESSAGE value="fixed convergence detection, Metropolis1D, multiprocessing" />
     <MESSAGE value="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker" />
-    <option name="LAST_COMMIT_MESSAGE" value="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker" />
+    <MESSAGE value="minor fix" />
+    <option name="LAST_COMMIT_MESSAGE" value="minor fix" />
   </component>
 </project>
