@@ -2,6 +2,12 @@
 # Created on 29/07/2021 09:30
 # Author : matteo
 
+"""
+Defines Moves for updating the position vectors.
+Moves can be walker-independent, where each walker is updated without information about other walkers,
+or walker-dependent.
+"""
+
 # ====================================================
 # imports
 import collections
@@ -49,7 +55,6 @@ class Move(ABC):
 
         :return: new proposed vector x of shape (ndim,)
         """
-        pass
 
     def _valid_proposal(self,
                         x: np.ndarray) -> np.ndarray:
@@ -325,13 +330,12 @@ class SetStretch(Stretch):
         """
         Find nearest values in <array> for each element in <vector>.
 
-        :param array: an array of allowed values.
         :param vector: an array of values for which to find nearest values.
 
         :return: an array with nearest values from <vector> in <array>.
         """
-        for index in range(len(vector)):
-            vector[index] = self.__position_set[index][np.nanargmin(np.abs(self.__position_set[index] - vector[index]))]
+        for index, value in enumerate(vector):
+            vector[index] = self.__position_set[index][np.nanargmin(np.abs(self.__position_set[index] - value))]
 
         return vector
 
