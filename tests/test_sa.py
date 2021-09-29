@@ -26,13 +26,18 @@ def vectorized_cost_function(x: np.ndarray) -> List[float]:
     return np.sum(x ** 2, axis=1) + np.random.normal(0, 1, size=len(x))
 
 
+def vectorized_deterministic_cost_function(x: np.ndarray) -> List[float]:
+    return list(np.sum(x ** 2, axis=1))
+
+
 def run_sa(move: Move,
            cost_func: Callable,
            nb_walkers: int = 1,
            nb_cores: int = 1,
            vectorized: bool = False,
            backup: bool = False,
-           nb_slots: Optional[int] = None) -> Result:
+           nb_slots: Optional[int] = None,
+           max_measures: int = 1000) -> Result:
     seed = 42
     np.random.seed(seed)
 
@@ -44,7 +49,7 @@ def run_sa(move: Move,
              moves=move,
              nb_walkers=nb_walkers,
              max_iter=200,
-             max_measures=1000,
+             max_measures=max_measures,
              final_acceptance_probability=1e-300,
              epsilon=0.001,
              T_0=5,
@@ -182,6 +187,23 @@ def test_slots():
     assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
+# cost function deterministic =================================================================
+def test_deterministic():
+    print('Test deterministic')
+    res = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
+                         bounds=BOUNDS),
+                 cost_func=vectorized_deterministic_cost_function,
+                 nb_walkers=5,
+                 vectorized=True,
+                 backup=True,
+                 max_measures=1)
+
+    res.trace.plot_positions(show=False, save='/home/matteo/Desktop/positions.html', extended=True)
+    res.trace.plot_parameters(show=False, save='/home/matteo/Desktop/parameters.html', extended=True)
+
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
+
+
 if __name__ == '__main__':
     test_RandomStep()
     test_Metropolis()
@@ -194,3 +216,4 @@ if __name__ == '__main__':
     test_vectorized()
     test_backup()
     test_slots()
+    test_deterministic()
