@@ -880,6 +880,9 @@ def n(k: int,
 
     :return: the number of necessary measures.
     """
+    if max_measures == 1:
+        return 1
+
     return int(np.ceil((max_measures * sigma_max ** 2) /
                        ((max_measures - 1) * sigma(k, T_0, alpha, epsilon) ** 2 + sigma_max ** 2)))
 
