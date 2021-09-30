@@ -17,8 +17,8 @@ from itertools import repeat
 
 from typing import Callable, Tuple, Optional, Sequence, Union, Any, List, Type
 
-from .utils import Result, Trace, get_mean_cost, get_vectorized_mean_cost, check_parameters, get_slots_per_walker, n, \
-    T, sigma
+from .utils import Result, Trace, get_mean_cost, get_evaluation_vectorized_mean_cost, get_walker_vectorized_mean_cost, \
+    check_parameters, get_slots_per_walker, n, T, sigma
 from .moves import Move, RandomStep, SetStep, SetStretch, parse_moves
 from .__mappers import LinearExecutor, VectorizedExecutor, ParallelExecutor
 from .__backup import Backup
@@ -40,6 +40,8 @@ def __initialize_sa(args: Optional[Sequence],
                     fun: Callable[[np.ndarray, Any], Union[List[float], float]],
                     nb_cores: int,
                     vectorized: bool,
+                    vectorized_on_evaluations: bool,
+                    vectorized_skip_marker: Any,
                     backup: bool,
                     nb_slots: Optional[int],
                     suppress_warnings: bool) -> Tuple[
@@ -74,6 +76,9 @@ def __initialize_sa(args: Optional[Sequence],
     :param nb_cores: number of cores that can be used to move walkers in parallel.
     :param vectorized: if True, the cost function <fun> is expected to work on an array of position vectors instead of
         just one. (<nb_cores> parameter will be set to 1 in this case.)
+    :param vectorized_on_evaluations: vectorize <fun> calls on evaluations (or walkers) ?
+    :param vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
+        evaluation for a particular position vector can be skipped.
     :param backup: use Backup for storing previously computed function evaluations and reusing them when returning to
         the same position vector ? (Only available when using SetStep moves).
     :param nb_slots: When using a vectorized function, the total number of position vectors for which the cost can be
@@ -110,7 +115,11 @@ def __initialize_sa(args: Optional[Sequence],
     x = x0.astype(np.float32)
 
     if vectorized:
-        costs = get_vectorized_mean_cost(fun, x, 1, args, [(0, 0.) for _ in range(len(x))])
+        if vectorized_on_evaluations:
+            costs = get_evaluation_vectorized_mean_cost(fun, x, 1, args, [(0, 0.) for _ in range(len(x))])
+        else:
+            costs = get_walker_vectorized_mean_cost(fun, x, 1, args, [(0, 0.) for _ in range(len(x))],
+                                                    vectorized_skip_marker)
     else:
         costs = [get_mean_cost(fun, x_vector, 1, args, (0, 0.)) for x_vector in x]
 
@@ -155,6 +164,8 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
        tol: float = 1e-3,
        nb_cores: int = 1,
        vectorized: bool = False,
+       vectorized_on_evaluations: bool = True,
+       vectorized_skip_marker: Any = None,
        backup: bool = False,
        nb_slots: Optional[int] = None,
        seed: int = 42,
@@ -188,6 +199,27 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
     :param nb_cores: number of cores that can be used to move walkers in parallel.
     :param vectorized: if True, the cost function <fun> is expected to work on an array of position vectors instead of
         just one. (<nb_cores> parameter will be set to 1 in this case.)
+    :param vectorized_on_evaluations: when using a vectorized function, the vectorization can happen on walkers or
+        on function evaluations.
+         - On function evaluations, a loop on walkers calls <fun> with a vector of positions of the walker, repeated
+         for the number of needed function evaluations.
+         Ex: 2 walkers with position vectors p1 and p2 each need n1 and n2 function evaluations. <fun> is first called
+         for walker 1 with a vector (p1, p1, ..., p1) of size n1, then <fun> is called for walker 2 with a vector
+         (p2, p2, ..., p2) of size n2.
+         This is the default option and is valid when <fun> is ok with receiving vectors of varying length and when
+         <max_measures> is greater than <nb_walkers>.
+
+         - On walkers, a loop on function evaluations calls <fun> with a vector of fixed size = <nb_walkers>.
+         Ex: 2 walkers with position vectors p1 and p2 each need n1 and n2 function evaluations. <fun> is called with
+         vector (p1, p2) for max(n1, n2) times.
+         Often, n1 =/= n2 which would yield unnecessary function evaluations (e.g. when n1 < n2, some evaluations of
+         p1 are not needed while p2 is still evaluated). To indicated that to <fun>, the <vectorized_skip_marker> is
+         passed instead of unnecessary position vectors (e.g. when n1 < n2, the vector passed to <fun> will
+         eventually be (<vectorized_skip_marker>, p2) instead of (p1, p2)).
+         This is valid when <fun> needs to receive vectors of fixed length and when <nb_walkers> is greater than
+         <max_measures>.
+    :param vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
+        evaluation for a particular position vector can be skipped.
     :param backup: use Backup for storing previously computed function evaluations and reusing them when returning to
         the same position vector ? (Only available when using SetStep moves).
     :param nb_slots: When using a vectorized function, the total number of position vectors for which the cost can be
@@ -208,7 +240,8 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
         list_probabilities, list_moves, x, costs, last_ns, T_final, alpha, sigma_max, nb_cores, nb_slots_per_walker, \
         backup_storage = \
         __initialize_sa(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol,
-                        moves, bounds, fun, nb_cores, vectorized, backup, nb_slots, suppress_warnings)
+                        moves, bounds, fun, nb_cores, vectorized, vectorized_on_evaluations, vectorized_skip_marker,
+                        backup, nb_slots, suppress_warnings)
 
     # initialize the trace history keeper
     trace = Trace(max_iter, x0.shape, window_size=window_size)
@@ -253,7 +286,9 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
                                  repeat(nb_slots_per_walker),
                                  repeat(acceptance_fraction if acceptance_fraction is not np.nan else 1.),
                                  positions=x.copy(),
-                                 backup=backup_storage)
+                                 backup=backup_storage,
+                                 vectorized_on_evaluations=vectorized_on_evaluations,
+                                 vectorized_skip_marker=vectorized_skip_marker)
 
                 for _x, _cost, _last_n, _accepted, _walker_index in updates:
                     if _accepted:

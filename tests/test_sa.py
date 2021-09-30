@@ -7,7 +7,7 @@
 import pytest
 import numpy as np
 
-from typing import List, Callable, Optional
+from typing import List, Callable, Optional, Any
 
 from josiann import sa, Result, Move, RandomStep, Metropolis, Metropolis1D, SetStep, Stretch, StretchAdaptive, \
     SetStretch
@@ -37,7 +37,9 @@ def run_sa(move: Move,
            vectorized: bool = False,
            backup: bool = False,
            nb_slots: Optional[int] = None,
-           max_measures: int = 1000) -> Result:
+           max_measures: int = 1000,
+           vectorized_on_evaluations: bool = True,
+           vectorized_skip_marker: Any = None) -> Result:
     seed = 42
     np.random.seed(seed)
 
@@ -56,6 +58,8 @@ def run_sa(move: Move,
              tol=1e-3,
              nb_cores=nb_cores,
              vectorized=vectorized,
+             vectorized_on_evaluations=vectorized_on_evaluations,
+             vectorized_skip_marker=vectorized_skip_marker,
              backup=backup,
              nb_slots=nb_slots,
              seed=seed)
@@ -160,6 +164,21 @@ def test_vectorized():
     assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
+def test_vectorized_on_walkers():
+    print('Test vectorized on walkers')
+    res = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
+                         bounds=BOUNDS),
+                 cost_func=vectorized_cost_function,
+                 nb_walkers=5,
+                 vectorized=True,
+                 vectorized_on_evaluations=False,
+                 vectorized_skip_marker=np.array([0., 0.]))
+
+    res.trace.plot_positions(show=False, save='/home/matteo/Desktop/positions.html')
+
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
+
+
 # with backup =================================================================
 def test_backup():
     print('Test backup')
@@ -214,6 +233,7 @@ if __name__ == '__main__':
     test_SetStretch()
     test_parallel()
     test_vectorized()
+    test_vectorized_on_walkers()
     test_backup()
     test_slots()
     test_deterministic()

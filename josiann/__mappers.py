@@ -18,7 +18,8 @@ from concurrent.futures import ProcessPoolExecutor
 
 from typing import Callable, Any, Tuple, List, Iterable, Sequence, Iterator, cast
 
-from .utils import State, get_mean_cost, get_vectorized_mean_cost, acceptance_log_probability, get_exploration_plan
+from .utils import State, get_mean_cost, get_evaluation_vectorized_mean_cost, get_walker_vectorized_mean_cost, \
+    acceptance_log_probability, get_exploration_plan
 from .moves import Move
 from .__backup import Backup, BackupManager
 
@@ -96,7 +97,9 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
                               temperature: float,
                               nb_slots: List[int],
                               acceptance: float,
-                              backup_storage: Backup) -> Iterator[Tuple[np.ndarray, float, int, bool, int]]:
+                              backup_storage: Backup,
+                              vectorized_on_evaluations: bool,
+                              vectorized_skip_marker: Any) -> Iterator[Tuple[np.ndarray, float, int, bool, int]]:
     """
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
     available moves and accepting the proposed new position based on the new cost.
@@ -116,6 +119,9 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
     :param nb_slots: the list of slots per walker.
     :param acceptance: the current acceptance fraction.
     :param backup_storage: a Backup object for storing previously computed positions.
+    :param vectorized_on_evaluations: vectorize <fun> calls on evaluations (or walkers) ?
+    :param vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
+        evaluation for a particular position vector can be skipped.
 
     :return: an iterator over the updated position vectors, costs, number of evaluations and whether the move were
         accepted.
@@ -129,19 +135,30 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
                                                         states[walker_index], [])[2]
                                    for walker_index in range(len(x))]).reshape(sum(nb_slots), x.shape[1])
 
-    unique_proposed_positions = np.unique(proposed_positions, axis=0)
+    if vectorized_on_evaluations:
+        unique_proposed_positions = np.unique(proposed_positions, axis=0)
 
-    previous_evaluations = [backup_storage.get_previous_evaluations(unique_proposed_positions[index])
-                            for index in range(len(unique_proposed_positions))]
+        previous_evaluations = [backup_storage.get_previous_evaluations(unique_proposed_positions[index])
+                                for index in range(len(unique_proposed_positions))]
 
-    unique_proposed_costs = get_vectorized_mean_cost(fun, unique_proposed_positions, current_n, args,
-                                                     previous_evaluations)
+        unique_proposed_costs = get_evaluation_vectorized_mean_cost(fun, unique_proposed_positions, current_n, args,
+                                                                    previous_evaluations)
 
-    proposed_costs = np.zeros(len(proposed_positions))
-    for i, cost in enumerate(unique_proposed_costs):
-        proposed_costs[np.all(proposed_positions == unique_proposed_positions[i], axis=1)] = cost
+        proposed_costs = np.zeros(len(proposed_positions))
+        for i, cost in enumerate(unique_proposed_costs):
+            proposed_costs[np.all(proposed_positions == unique_proposed_positions[i], axis=1)] = cost
 
-        backup_storage.save(unique_proposed_positions[i], (current_n, cost))
+            backup_storage.save(unique_proposed_positions[i], (current_n, cost))
+
+    else:
+        previous_evaluations = [backup_storage.get_previous_evaluations(proposed_positions[index])
+                                for index in range(len(proposed_positions))]
+
+        proposed_costs = get_walker_vectorized_mean_cost(fun, proposed_positions, current_n, args,
+                                                         previous_evaluations, vectorized_skip_marker)
+
+        for i, cost in enumerate(proposed_costs):
+            backup_storage.save(proposed_positions[i], (current_n, cost))
 
     results = []
 
@@ -246,7 +263,9 @@ class VectorizedExecutor(Executor):
                                          temperature=cast(float, next(iterables[9])),                   # type: ignore
                                          nb_slots=cast(int, next(iterables[10])),                       # type: ignore
                                          acceptance=cast(float, next(iterables[11])),                   # type: ignore
-                                         backup_storage=kwargs['backup'])
+                                         backup_storage=kwargs['backup'],
+                                         vectorized_on_evaluations=kwargs['vectorized_on_evaluations'],
+                                         vectorized_skip_marker=kwargs['vectorized_skip_marker'])
 
 
 class ParallelExecutor(ProcessPoolExecutor):
