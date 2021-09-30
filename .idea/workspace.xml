@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="implemented vectorization on walkers">
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fix walker vectorization">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/josiann/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_sa.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -163,7 +161,7 @@
       <workItem from="1632908376806" duration="159000" />
       <workItem from="1632923074060" duration="627000" />
       <workItem from="1632929842883" duration="8005000" />
-      <workItem from="1632988943797" duration="3818000" />
+      <workItem from="1632988943797" duration="4853000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -256,7 +254,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632990001282</updated>
     </task>
-    <option name="localTasksCounter" value="14" />
+    <task id="LOCAL-00014" summary="fix walker vectorization">
+      <created>1632992790229</created>
+      <option name="number" value="00014" />
+      <option name="presentableId" value="LOCAL-00014" />
+      <option name="project" value="LOCAL" />
+      <updated>1632992790229</updated>
+    </task>
+    <option name="localTasksCounter" value="15" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -289,6 +294,7 @@
     <MESSAGE value="fix always running parallel executor" />
     <MESSAGE value="fixed bug : can run with 1 max measure" />
     <MESSAGE value="implemented vectorization on walkers" />
-    <option name="LAST_COMMIT_MESSAGE" value="implemented vectorization on walkers" />
+    <MESSAGE value="fix walker vectorization" />
+    <option name="LAST_COMMIT_MESSAGE" value="fix walker vectorization" />
   </component>
 </project>
