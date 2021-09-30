@@ -858,7 +858,7 @@ def get_walker_vectorized_mean_cost(fun: Callable,
     remaining_n = [_n - ln for ln in last_n]
     last_mean = list(next(zipped_last))
 
-    if min(remaining_n):
+    if max(remaining_n):
         costs = np.zeros(len(x))
 
         for eval_index in range(max(remaining_n)):
