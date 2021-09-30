@@ -23,7 +23,7 @@ from multiprocessing import cpu_count
 from dataclasses import dataclass, field
 from plotly.subplots import make_subplots
 
-from typing import Union, Sequence, Tuple, List, Callable, Optional, TYPE_CHECKING
+from typing import Union, Sequence, Tuple, List, Callable, Optional, Any, TYPE_CHECKING
 
 from .name_utils import ShapeError
 
@@ -800,11 +800,11 @@ def get_mean_cost(fun: Callable,
     return last_mean * last_n / _n + sum([fun(x, *args)**2 for _ in range(_n - last_n)]) / _n
 
 
-def get_vectorized_mean_cost(fun: Callable,
-                             x: np.ndarray,
-                             _n: int,
-                             args: Tuple,
-                             previous_evaluations: List[Tuple[int, float]]) -> List[float]:
+def get_evaluation_vectorized_mean_cost(fun: Callable,
+                                        x: np.ndarray,
+                                        _n: int,
+                                        args: Tuple,
+                                        previous_evaluations: List[Tuple[int, float]]) -> List[float]:
     """
     Same as 'get_mean_cost' but <fun> is a vectorized function and costs are computed for all walkers at once.
 
@@ -822,10 +822,55 @@ def get_vectorized_mean_cost(fun: Callable,
     for walker_index, walker_position in enumerate(x):
         last_n, last_mean = previous_evaluations[walker_index]
         remaining_n = _n - last_n
-        evaluations[walker_index] = last_mean * last_n / _n + \
-            sum(fun(np.tile(walker_position, (remaining_n, 1)), *args)) / _n
+        if remaining_n:
+            evaluations[walker_index] = last_mean * last_n / _n + \
+                sum(fun(np.tile(walker_position, (remaining_n, 1)), *args)) / _n
+
+        else:
+            evaluations[walker_index] = last_mean
 
     return evaluations
+
+
+def get_walker_vectorized_mean_cost(fun: Callable,
+                                    x: np.ndarray,
+                                    _n: int,
+                                    args: Tuple,
+                                    previous_evaluations: List[Tuple[int, float]],
+                                    vectorized_skip_marker: Any) -> List[float]:
+    """
+    Same as 'get_mean_cost' but <fun> is a vectorized function and costs are computed for all walkers at once but
+        sequentially on function evaluations.
+
+    :param fun: a vectorized function to evaluate.
+    :param x: a matrix of position vectors of shape (nb_walkers, d).
+    :param _n: the number of evaluations to compute.
+    :param args: arguments to be passed to <fun>.
+    :param previous_evaluations: list of previously computed function evaluations at position x: number of last function
+        evaluations and obtained means for each walker position.
+    :param vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
+        evaluation for a particular position vector can be skipped.
+
+    :return: the mean of function evaluations at x.
+    """
+    zipped_last = zip(*[previous_evaluations[walker_index] for walker_index, _ in enumerate(x)])
+    last_n = list(next(zipped_last))
+    remaining_n = [_n - ln for ln in last_n]
+    last_mean = list(next(zipped_last))
+
+    if min(remaining_n):
+        costs = np.zeros(len(x))
+
+        for eval_index in range(max(remaining_n)):
+            eval_vector = np.array([walker_position if eval_index < remaining_n[walker_index] else
+                                    vectorized_skip_marker
+                                    for walker_index, walker_position in enumerate(x)])
+
+            costs += np.array(fun(eval_vector, *args))
+
+        return (np.array(last_mean) * last_n + costs) / _n
+
+    return last_mean
 
 
 def acceptance_log_probability(current_cost: float,

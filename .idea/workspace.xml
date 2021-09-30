@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fix always running parallel executor">
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fixed bug : can run with 1 max measure">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__mappers.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/utils.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/tests/test_sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_sa.py" afterDir="false" />
     </list>
@@ -43,6 +45,7 @@
     <setting file="file://$PROJECT_DIR$/../vdata/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/.drone.yml" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="notebook:///home/matteo/git/josiann/tests/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/.drone.yml" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../Real_platform/app/pages/home/callbacks/home_main_callbacks.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/tests/tests_vdata/test_VData_read.py" root0="FORCE_HIGHLIGHTING" />
@@ -54,7 +57,6 @@
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/indexers.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/__mappers.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/views/dataframe.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/josiann/tests/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/utils.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="notebook:///home/matteo/git/vdata/tests/fix_vdata.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/josiann/moves.py" root0="FORCE_HIGHLIGHTING" />
@@ -117,9 +119,6 @@
       <module name="josiann" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
       <option name="SDK_HOME" value="$USER_HOME$/anaconda3/envs/pyREAL/bin/python" />
       <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
       <option name="IS_MODULE_SDK" value="false" />
@@ -163,7 +162,9 @@
       <workItem from="1632734113473" duration="5295000" />
       <workItem from="1632753214489" duration="47000" />
       <workItem from="1632908376806" duration="159000" />
-      <workItem from="1632923074060" duration="522000" />
+      <workItem from="1632923074060" duration="627000" />
+      <workItem from="1632929842883" duration="8005000" />
+      <workItem from="1632988943797" duration="962000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -242,7 +243,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632753247365</updated>
     </task>
-    <option name="localTasksCounter" value="12" />
+    <task id="LOCAL-00012" summary="fixed bug : can run with 1 max measure">
+      <created>1632923685390</created>
+      <option name="number" value="00012" />
+      <option name="presentableId" value="LOCAL-00012" />
+      <option name="project" value="LOCAL" />
+      <updated>1632923685390</updated>
+    </task>
+    <option name="localTasksCounter" value="13" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -273,6 +281,7 @@
     <MESSAGE value="implemented &quot;slots&quot; for vectorized cost functions : an exploration plan is defined to test multiple moves for each walker" />
     <MESSAGE value="minor fix" />
     <MESSAGE value="fix always running parallel executor" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix always running parallel executor" />
+    <MESSAGE value="fixed bug : can run with 1 max measure" />
+    <option name="LAST_COMMIT_MESSAGE" value="fixed bug : can run with 1 max measure" />
   </component>
 </project>
