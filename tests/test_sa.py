@@ -179,6 +179,22 @@ def test_vectorized_on_walkers():
     assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
+def test_vectorized_on_walkers_and_slots():
+    print('Test vectorized on walkers and slots')
+    res = run_sa(SetStep(position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
+                         bounds=BOUNDS),
+                 cost_func=vectorized_cost_function,
+                 nb_walkers=1,
+                 vectorized=True,
+                 vectorized_on_evaluations=False,
+                 vectorized_skip_marker=np.array([1., 1.]),
+                 nb_slots=4)
+
+    res.trace.plot_positions(show=False, save='/home/matteo/Desktop/positions.html')
+
+    assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
+
+
 # with backup =================================================================
 def test_backup():
     print('Test backup')
@@ -234,6 +250,7 @@ if __name__ == '__main__':
     test_parallel()
     test_vectorized()
     test_vectorized_on_walkers()
+    test_vectorized_on_walkers_and_slots()
     test_backup()
     test_slots()
     test_deterministic()
