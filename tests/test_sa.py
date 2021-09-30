@@ -174,8 +174,6 @@ def test_vectorized_on_walkers():
                  vectorized_on_evaluations=False,
                  vectorized_skip_marker=np.array([0., 0.]))
 
-    res.trace.plot_positions(show=False, save='/home/matteo/Desktop/positions.html')
-
     assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
 
@@ -189,8 +187,6 @@ def test_vectorized_on_walkers_and_slots():
                  vectorized_on_evaluations=False,
                  vectorized_skip_marker=np.array([1., 1.]),
                  nb_slots=4)
-
-    res.trace.plot_positions(show=False, save='/home/matteo/Desktop/positions.html')
 
     assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
@@ -232,9 +228,6 @@ def test_deterministic():
                  vectorized=True,
                  backup=True,
                  max_measures=1)
-
-    res.trace.plot_positions(show=False, save='/home/matteo/Desktop/positions.html', extended=True)
-    res.trace.plot_parameters(show=False, save='/home/matteo/Desktop/parameters.html', extended=True)
 
     assert res.x[0] in [-0.25, 0, 0.25] and res.x[1] in [0.5, 0.75], res.x
 
