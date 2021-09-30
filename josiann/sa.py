@@ -111,27 +111,7 @@ def __initialize_sa(args: Optional[Sequence],
     # init backup storage
     backup_storage = Backup(active=using_SetStep and backup)
 
-    # initial state
-    x = x0.astype(np.float32)
-
-    if vectorized:
-        if vectorized_on_evaluations:
-            costs = get_evaluation_vectorized_mean_cost(fun, x, 1, args, [(0, 0.) for _ in range(len(x))])
-        else:
-            costs = get_walker_vectorized_mean_cost(fun, x, 1, args, [(0, 0.) for _ in range(len(x))],
-                                                    vectorized_skip_marker)
-    else:
-        costs = [get_mean_cost(fun, x_vector, 1, args, (0, 0.)) for x_vector in x]
-
-    last_ns = [1 for _ in range(nb_walkers)]
-
-    # initialize parameters
-    T_final = -1 / np.log(final_acceptance_probability)
-    alpha = (T_final / T_0) ** (1 / max_iter)
-
-    # sigma_max = T_0
-    sigma_max = np.sqrt((max_measures - 1) * T_0 * alpha * (1 - epsilon)) / 3
-
+    # init nb_slots
     if nb_slots is None:
         nb_slots_per_walker = [1 for _ in range(nb_walkers)]
 
@@ -143,6 +123,30 @@ def __initialize_sa(args: Optional[Sequence],
 
     else:
         nb_slots_per_walker = get_slots_per_walker(nb_slots, nb_walkers)
+
+    # initial state
+    x = x0.astype(np.float32)
+
+    if vectorized:
+        if vectorized_on_evaluations:
+            costs = get_evaluation_vectorized_mean_cost(fun, x, 1, args, [(0, 0.) for _ in range(len(x))])
+        else:
+            init_x = np.zeros((sum(nb_slots_per_walker), x0.shape[1]))
+            init_x[0:len(x)] = x
+            costs = get_walker_vectorized_mean_cost(fun, init_x, 1, args, [(0, 0.) for _ in range(len(x))] +
+                                                    [(max_iter, 0.) for _ in range(sum(nb_slots_per_walker) - len(x))],
+                                                    vectorized_skip_marker)[0:len(x)]
+    else:
+        costs = [get_mean_cost(fun, x_vector, 1, args, (0, 0.)) for x_vector in x]
+
+    last_ns = [1 for _ in range(nb_walkers)]
+
+    # initialize parameters
+    T_final = -1 / np.log(final_acceptance_probability)
+    alpha = (T_final / T_0) ** (1 / max_iter)
+
+    # sigma_max = T_0
+    sigma_max = np.sqrt((max_measures - 1) * T_0 * alpha * (1 - epsilon)) / 3
 
     return args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, window_size, \
         list_probabilities, list_moves, x, costs, last_ns, T_final, alpha, sigma_max, nb_cores, nb_slots_per_walker, \

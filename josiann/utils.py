@@ -866,7 +866,13 @@ def get_walker_vectorized_mean_cost(fun: Callable,
                                     vectorized_skip_marker
                                     for walker_index, walker_position in enumerate(x)])
 
-            costs += np.array(fun(eval_vector, *args))
+            res = np.array(fun(eval_vector, *args))
+
+            for walker_index, _ in enumerate(res):
+                if eval_index >= remaining_n[walker_index]:
+                    res[walker_index] = 0.
+
+            costs += res
 
         return (np.array(last_mean) * last_n + costs) / _n
 
