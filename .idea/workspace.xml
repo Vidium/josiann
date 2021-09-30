@@ -1,9 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fix walker vectorization">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/test_sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/test_sa.py" afterDir="false" />
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="mypy fixes">
+      <change beforePath="$PROJECT_DIR$/josiann/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__mappers.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -161,7 +160,7 @@
       <workItem from="1632908376806" duration="159000" />
       <workItem from="1632923074060" duration="627000" />
       <workItem from="1632929842883" duration="8005000" />
-      <workItem from="1632988943797" duration="4853000" />
+      <workItem from="1632988943797" duration="5249000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -261,7 +260,14 @@
       <option name="project" value="LOCAL" />
       <updated>1632992790229</updated>
     </task>
-    <option name="localTasksCounter" value="15" />
+    <task id="LOCAL-00015" summary="mypy fixes">
+      <created>1633002636041</created>
+      <option name="number" value="00015" />
+      <option name="presentableId" value="LOCAL-00015" />
+      <option name="project" value="LOCAL" />
+      <updated>1633002636041</updated>
+    </task>
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -295,6 +301,7 @@
     <MESSAGE value="fixed bug : can run with 1 max measure" />
     <MESSAGE value="implemented vectorization on walkers" />
     <MESSAGE value="fix walker vectorization" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix walker vectorization" />
+    <MESSAGE value="mypy fixes" />
+    <option name="LAST_COMMIT_MESSAGE" value="mypy fixes" />
   </component>
 </project>

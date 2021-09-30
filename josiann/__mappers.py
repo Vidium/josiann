@@ -144,7 +144,7 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
         unique_proposed_costs = get_evaluation_vectorized_mean_cost(fun, unique_proposed_positions, current_n, args,
                                                                     previous_evaluations)
 
-        proposed_costs = [0. for _ in enumerate(proposed_positions)]
+        proposed_costs = np.zeros((len(proposed_positions)))
         for i, cost in enumerate(unique_proposed_costs):
             proposed_costs[np.all(proposed_positions == unique_proposed_positions[i], axis=1)] = cost
 
@@ -154,8 +154,8 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
         previous_evaluations = [backup_storage.get_previous_evaluations(proposed_positions[index])
                                 for index in range(len(proposed_positions))]
 
-        proposed_costs = get_walker_vectorized_mean_cost(fun, proposed_positions, current_n, args,
-                                                         previous_evaluations, vectorized_skip_marker)
+        proposed_costs = np.array(get_walker_vectorized_mean_cost(fun, proposed_positions, current_n, args,
+                                                                  previous_evaluations, vectorized_skip_marker))
 
         for i, cost in enumerate(proposed_costs):
             backup_storage.save(proposed_positions[i], (current_n, cost))
