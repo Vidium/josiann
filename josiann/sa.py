@@ -15,7 +15,7 @@ from tqdm import tqdm
 from warnings import warn
 from itertools import repeat
 
-from typing import Callable, Tuple, Optional, Sequence, Union, Any, List, Type
+from typing import Callable, Optional, Sequence, Union, Any, Type
 
 from .utils import Result, Trace, get_mean_cost, get_evaluation_vectorized_mean_cost, get_walker_vectorized_mean_cost, \
     check_parameters, get_slots_per_walker, n, T, sigma
@@ -35,33 +35,34 @@ def __initialize_sa(args: Optional[Sequence],
                     epsilon: float,
                     T_0: float,
                     tol: float,
-                    moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]],
-                    bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]],
-                    fun: Callable[[np.ndarray, Any], Union[List[float], float]],
+                    moves: Union[Move, Sequence[Move], Sequence[tuple[float, Move]]],
+                    bounds: Optional[Union[tuple[float, float], Sequence[tuple[float, float]]]],
+                    fun: Callable[[np.ndarray, Any], Union[list[float], float]],
                     nb_cores: int,
                     vectorized: bool,
                     vectorized_on_evaluations: bool,
                     vectorized_skip_marker: Any,
                     backup: bool,
                     nb_slots: Optional[int],
-                    suppress_warnings: bool) -> Tuple[
-    Tuple, np.ndarray, int, int, float, float, float, float, int, List[float], List[Move], np.ndarray,
-    List[float], List[int], float, float, float, int, List[int], Backup
+                    suppress_warnings: bool) -> tuple[
+    tuple, np.ndarray, int, int, float, float, float, float, int, list[float], list[Move], np.ndarray,
+    list[float], list[int], float, float, float, int, list[int], Backup
 ]:
     """
     Check validity of parameters and compute initial values before running the SA algorithm.
 
-    :param args: an optional sequence of arguments to pass to the function to minimize.
-    :param x0: a <d> dimensional vector of initial values or a matrix of initial values of shape (nb_walkers, d).
-    :param nb_walkers: the number of parallel walkers in the ensemble.
-    :param max_iter: the maximum number of iterations before stopping the algorithm.
-    :param max_measures: the maximum number of function evaluations to average per step.
-    :param final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
-    :param epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
-        steeper descent profiles)
-    :param T_0: initial temperature value.
-    :param tol: the convergence tolerance.
-    :param moves: either
+    Args:
+        args: an optional sequence of arguments to pass to the function to minimize.
+        x0: a <d> dimensional vector of initial values or a matrix of initial values of shape (nb_walkers, d).
+        nb_walkers: the number of parallel walkers in the ensemble.
+        max_iter: the maximum number of iterations before stopping the algorithm.
+        max_measures: the maximum number of function evaluations to average per step.
+        final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
+            steeper descent profiles)
+        T_0: initial temperature value.
+        tol: the convergence tolerance.
+        moves: either
                     - a single josiann.Move object
                     - a sequence of josiann.Move objects (all Moves have the same probability of being selected at
                         each step for proposing a new candidate vector x)
@@ -69,23 +70,24 @@ def __initialize_sa(args: Optional[Sequence],
                         (selection probability, josiann.Move)
                         In this case, the selection probability dictates the probability of each Move of being
                         selected at each step.
-    :param bounds: an optional sequence of bounds (one for each <n> dimensions) with the following format:
-        (lower_bound, upper_bound)
-        or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
-    :param fun: a <d> dimensional (noisy) function to minimize.
-    :param nb_cores: number of cores that can be used to move walkers in parallel.
-    :param vectorized: if True, the cost function <fun> is expected to work on an array of position vectors instead of
-        just one. (<nb_cores> parameter will be set to 1 in this case.)
-    :param vectorized_on_evaluations: vectorize <fun> calls on evaluations (or walkers) ?
-    :param vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
-        evaluation for a particular position vector can be skipped.
-    :param backup: use Backup for storing previously computed function evaluations and reusing them when returning to
-        the same position vector ? (Only available when using SetStep moves).
-    :param nb_slots: When using a vectorized function, the total number of position vectors for which the cost can be
-        computed at once.
-    :param suppress_warnings: remove warnings ?
+        bounds: an optional sequence of bounds (one for each <n> dimensions) with the following format:
+            (lower_bound, upper_bound)
+            or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
+        fun: a <d> dimensional (noisy) function to minimize.
+        nb_cores: number of cores that can be used to move walkers in parallel.
+        vectorized: if True, the cost function <fun> is expected to work on an array of position vectors instead of
+            just one. (<nb_cores> parameter will be set to 1 in this case.)
+        vectorized_on_evaluations: vectorize <fun> calls on evaluations (or walkers) ?
+        vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
+            evaluation for a particular position vector can be skipped.
+        backup: use Backup for storing previously computed function evaluations and reusing them when returning to
+            the same position vector ? (Only available when using SetStep moves).
+        nb_slots: When using a vectorized function, the total number of position vectors for which the cost can be
+            computed at once.
+        suppress_warnings: remove warnings ?
 
-    :return: Valid parameters and initial values.
+    Returns:
+        Valid parameters and initial values.
     """
     # check parameters
     args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, nb_cores \
@@ -153,11 +155,11 @@ def __initialize_sa(args: Optional[Sequence],
         backup_storage
 
 
-def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
+def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
        x0: np.ndarray,
        args: Optional[Sequence] = None,
-       bounds: Optional[Sequence[Tuple[float, float]]] = None,
-       moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]] = ((0.8, RandomStep(0.05)),
+       bounds: Optional[Sequence[tuple[float, float]]] = None,
+       moves: Union[Move, Sequence[Move], Sequence[tuple[float, Move]]] = ((0.8, RandomStep(0.05)),
                                                                            (0.2, RandomStep(0.5))),
        nb_walkers: int = 1,
        max_iter: int = 200,
@@ -172,19 +174,20 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
        vectorized_skip_marker: Any = None,
        backup: bool = False,
        nb_slots: Optional[int] = None,
-       seed: int = 42,
+       seed: Optional[int] = None,
        verbose: bool = True,
        suppress_warnings: bool = False) -> Result:
     """
     Simulated Annealing for minimizing noisy cost functions.
 
-    :param fun: a <d> dimensional (noisy) function to minimize.
-    :param x0: a <d> dimensional vector of initial values.
-    :param args: an optional sequence of arguments to pass to the function to minimize.
-    :param bounds: an optional sequence of bounds (one for each <n> dimensions) with the following format:
-        (lower_bound, upper_bound)
-        or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
-    :param moves: either
+    Args:
+        fun: a <d> dimensional (noisy) function to minimize.
+        x0: a <d> dimensional vector of initial values.
+        args: an optional sequence of arguments to pass to the function to minimize.
+        bounds: an optional sequence of bounds (one for each <n> dimensions) with the following format:
+            (lower_bound, upper_bound)
+            or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
+        moves: either
                     - a single josiann.SingleMove object
                     - a sequence of josiann.SingleMove objects (all Moves have the same probability of being selected at
                         each step for proposing a new candidate vector x)
@@ -192,52 +195,55 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, List[float]]],
                         (selection probability, josiann.SingleMove)
                         In this case, the selection probability dictates the probability of each Move of being
                         selected at each step.
-    :param nb_walkers: the number of parallel walkers in the ensemble.
-    :param max_iter: the maximum number of iterations before stopping the algorithm.
-    :param max_measures: the maximum number of function evaluations to average per step.
-    :param final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
-    :param epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
-        steeper descent profiles)
-    :param T_0: initial temperature value.
-    :param tol: the convergence tolerance.
-    :param nb_cores: number of cores that can be used to move walkers in parallel.
-    :param vectorized: if True, the cost function <fun> is expected to work on an array of position vectors instead of
-        just one. (<nb_cores> parameter will be set to 1 in this case.)
-    :param vectorized_on_evaluations: when using a vectorized function, the vectorization can happen on walkers or
-        on function evaluations.
-         - On function evaluations, a loop on walkers calls <fun> with a vector of positions of the walker, repeated
-         for the number of needed function evaluations.
-         Ex: 2 walkers with position vectors p1 and p2 each need n1 and n2 function evaluations. <fun> is first called
-         for walker 1 with a vector (p1, p1, ..., p1) of size n1, then <fun> is called for walker 2 with a vector
-         (p2, p2, ..., p2) of size n2.
-         This is the default option and is valid when <fun> is ok with receiving vectors of varying length and when
-         <max_measures> is greater than <nb_walkers>.
+        nb_walkers: the number of parallel walkers in the ensemble.
+        max_iter: the maximum number of iterations before stopping the algorithm.
+        max_measures: the maximum number of function evaluations to average per step.
+        final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
+            steeper descent profiles)
+        T_0: initial temperature value.
+        tol: the convergence tolerance.
+        nb_cores: number of cores that can be used to move walkers in parallel.
+        vectorized: if True, the cost function <fun> is expected to work on an array of position vectors instead of
+            just one. (<nb_cores> parameter will be set to 1 in this case.)
+        vectorized_on_evaluations: when using a vectorized function, the vectorization can happen on walkers or
+            on function evaluations.
+             - On function evaluations, a loop on walkers calls <fun> with a vector of positions of the walker, repeated
+             for the number of needed function evaluations.
+             Ex: 2 walkers with position vectors p1 and p2 each need n1 and n2 function evaluations. <fun> is first
+             called for walker 1 with a vector (p1, p1, ..., p1) of size n1, then <fun> is called for walker 2 with a
+             vector (p2, p2, ..., p2) of size n2.
+             This is the default option and is valid when <fun> is ok with receiving vectors of varying length and when
+             <max_measures> is greater than <nb_walkers>.
 
-         - On walkers, a loop on function evaluations calls <fun> with a vector of fixed size = <nb_walkers>.
-         Ex: 2 walkers with position vectors p1 and p2 each need n1 and n2 function evaluations. <fun> is called with
-         vector (p1, p2) for max(n1, n2) times.
-         Often, n1 =/= n2 which would yield unnecessary function evaluations (e.g. when n1 < n2, some evaluations of
-         p1 are not needed while p2 is still evaluated). To indicated that to <fun>, the <vectorized_skip_marker> is
-         passed instead of unnecessary position vectors (e.g. when n1 < n2, the vector passed to <fun> will
-         eventually be (<vectorized_skip_marker>, p2) instead of (p1, p2)).
-         This is valid when <fun> needs to receive vectors of fixed length and when <nb_walkers> is greater than
-         <max_measures>.
-    :param vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
-        evaluation for a particular position vector can be skipped.
-    :param backup: use Backup for storing previously computed function evaluations and reusing them when returning to
-        the same position vector ? (Only available when using SetStep moves).
-    :param nb_slots: When using a vectorized function, the total number of position vectors for which the cost can be
-        computed at once.
-        For example, when using 5 walkers and 22 slots, each walker will be attributed respectively 5, 5, 4, 4,
-        and 4 slots.
-        Multiple slots per walker are used for exploring multiple possible moves from the starting position vector of
-        each walker, increasing convergence speed.
-    :param seed: a seed for the random generator.
-    :param verbose: print progress bar ? (default True)
-    :param suppress_warnings: remove warnings ? (default False)
+             - On walkers, a loop on function evaluations calls <fun> with a vector of fixed size = <nb_walkers>.
+             Ex: 2 walkers with position vectors p1 and p2 each need n1 and n2 function evaluations. <fun> is called
+             with vector (p1, p2) for max(n1, n2) times.
+             Often, n1 =/= n2 which would yield unnecessary function evaluations (e.g. when n1 < n2, some evaluations of
+             p1 are not needed while p2 is still evaluated). To indicated that to <fun>, the <vectorized_skip_marker> is
+             passed instead of unnecessary position vectors (e.g. when n1 < n2, the vector passed to <fun> will
+             eventually be (<vectorized_skip_marker>, p2) instead of (p1, p2)).
+             This is valid when <fun> needs to receive vectors of fixed length and when <nb_walkers> is greater than
+             <max_measures>.
+        vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
+            evaluation for a particular position vector can be skipped.
+        backup: use Backup for storing previously computed function evaluations and reusing them when returning to
+            the same position vector ? (Only available when using SetStep moves).
+        nb_slots: When using a vectorized function, the total number of position vectors for which the cost can be
+            computed at once.
+            For example, when using 5 walkers and 22 slots, each walker will be attributed respectively 5, 5, 4, 4,
+            and 4 slots.
+            Multiple slots per walker are used for exploring multiple possible moves from the starting position vector
+            of each walker, increasing convergence speed.
+        seed: a seed for the random generator.
+        verbose: print progress bar ? (default True)
+        suppress_warnings: remove warnings ? (default False)
 
-    :return: a Result object.
+    Returns:
+        A Result object.
     """
+    if seed is None:
+        seed = int(time.time())
     np.random.seed(seed)
 
     args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol, window_size, \

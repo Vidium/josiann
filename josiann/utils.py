@@ -23,7 +23,7 @@ from multiprocessing import cpu_count
 from dataclasses import dataclass, field
 from plotly.subplots import make_subplots
 
-from typing import Union, Sequence, Tuple, List, Callable, Optional, Any, TYPE_CHECKING
+from typing import Union, Sequence, Callable, Optional, Any, TYPE_CHECKING
 
 from .name_utils import ShapeError
 
@@ -44,7 +44,7 @@ class Trace:
 
     def __init__(self,
                  nb_iterations: int,
-                 shape: Tuple[int, ...],
+                 shape: tuple[int, ...],
                  window_size: int):
         self.__position_trace = np.zeros((nb_iterations, shape[0], shape[1]), dtype=np.float32)
         self.__best_position_trace = np.zeros((nb_iterations, shape[1]+3), dtype=np.float32)
@@ -64,7 +64,7 @@ class Trace:
 
     def initialize(self,
                    position: np.ndarray,
-                   costs: List[float]) -> None:
+                   costs: list[float]) -> None:
         """
         Save state zero before running the SA algorithm. This function should be called before actually storing run
             values.
@@ -100,11 +100,11 @@ class Trace:
 
     def store(self,
               position: np.ndarray,
-              costs: List[float],
+              costs: list[float],
               temperature: float,
               _n: int,
               _sigma: float,
-              accepted: List[bool]) -> int:
+              accepted: list[bool]) -> int:
         """
         Save the current position of the vector to optimize, the current cost, temperature and number of averaged
             function evaluations.
@@ -136,11 +136,11 @@ class Trace:
     def update(self,
                index: int,
                position: np.ndarray,
-               costs: List[float],
-               rescued: List[bool],
+               costs: list[float],
+               rescued: list[bool],
                best_position: np.ndarray,
                best_cost: float,
-               best_index: List[int],
+               best_index: list[int],
                computation_time: float) -> None:
         """
 
@@ -213,7 +213,7 @@ class Trace:
             [np.sum(self.__accepted[self.__iteration_counter - self.__window_size:self.__iteration_counter, w]) /
              self.__window_size for w in range(self.nb_walkers)]))
 
-    def are_stuck(self) -> List[bool]:
+    def are_stuck(self) -> list[bool]:
         """
         Detect which walkers are stuck at the same position within the last <window_size> positions.
 
@@ -270,7 +270,7 @@ class Trace:
         """
         return self.__iteration_counter + 1 * self.__initialized
 
-    def get_best(self) -> Tuple[np.ndarray, float, List[int]]:
+    def get_best(self) -> tuple[np.ndarray, float, list[int]]:
         """
         Get the best vector with associated cost and iteration at which it was reached.
 
@@ -305,7 +305,7 @@ class Trace:
             self.__cost_trace[_best_index[0], _best_index[1]], \
             _best_index
 
-    def get_position_trace(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    def get_position_trace(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         """
         Get traces for vector, cost values, n at cost evaluation and best vector along iterations.
 
@@ -313,7 +313,7 @@ class Trace:
         """
         return self.__position_trace, self.__cost_trace, self.__cost_trace_n, self.__best_position_trace
 
-    def get_parameters_trace(self) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def get_parameters_trace(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Get traces related to parameters values along iterations.
 
@@ -321,7 +321,7 @@ class Trace:
         """
         return self.__temperature_trace, self.__n_trace, self.__sigma_trace
 
-    def get_acceptance_trace(self) -> Tuple[np.ndarray, np.ndarray]:
+    def get_acceptance_trace(self) -> tuple[np.ndarray, np.ndarray]:
         """
         Get traces related to acceptance rates along iterations.
 
@@ -353,7 +353,7 @@ class Trace:
 
         fig = make_subplots(rows=self.ndim + supp_plots, cols=1, shared_xaxes=True,
                             subplot_titles=titles,
-                            vertical_spacing=0.05)
+                            vertical_spacing=0)  # min(0.05, 1 / (self.ndim + supp_plots - 1))
 
         for w in range(self.nb_walkers):
             fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
@@ -501,7 +501,7 @@ class Trace:
 
         fig = make_subplots(rows=sub_plots, cols=1, shared_xaxes=True,
                             subplot_titles=titles,
-                            vertical_spacing=0.05)
+                            vertical_spacing=min(0.05, 1 / (sub_plots - 1)))
 
         if self.nb_iterations:
             fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
@@ -623,7 +623,7 @@ class Result:
     active_backup: bool
     x: np.ndarray = field(init=False)
     x_cost: float = field(init=False)
-    x_iter: List[int] = field(init=False)
+    x_iter: list[int] = field(init=False)
 
     def __post_init__(self):
         try:
@@ -664,10 +664,10 @@ def check_parameters(args: Optional[Sequence],
                      epsilon: float,
                      T_0: float,
                      tol: float,
-                     bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]],
+                     bounds: Optional[Union[tuple[float, float], Sequence[tuple[float, float]]]],
                      nb_cores: int,
-                     vectorized: bool) -> Tuple[
-    Tuple, np.ndarray, int, int, float, float, float, float, int
+                     vectorized: bool) -> tuple[
+    tuple, np.ndarray, int, int, float, float, float, float, int
 ]:
     """
     Check validity of parameters.
@@ -782,8 +782,8 @@ def check_parameters(args: Optional[Sequence],
 def get_mean_cost(fun: Callable,
                   x: np.ndarray,
                   _n: int,
-                  args: Tuple,
-                  previous_evaluations: Tuple[int, float]) -> float:
+                  args: tuple,
+                  previous_evaluations: tuple[int, float]) -> float:
     """
     Get the mean of <n> function evaluations for vector of values <x>.
 
@@ -797,14 +797,14 @@ def get_mean_cost(fun: Callable,
     :return: the mean of function evaluations at x.
     """
     last_n, last_mean = previous_evaluations
-    return last_mean * last_n / _n + sum([fun(x, *args)**2 for _ in range(_n - last_n)]) / _n
+    return last_mean * last_n / _n + sum([max(0, fun(x, *args)) for _ in range(_n - last_n)]) / _n
 
 
 def get_evaluation_vectorized_mean_cost(fun: Callable,
                                         x: np.ndarray,
                                         _n: int,
-                                        args: Tuple,
-                                        previous_evaluations: List[Tuple[int, float]]) -> List[float]:
+                                        args: tuple,
+                                        previous_evaluations: list[tuple[int, float]]) -> list[float]:
     """
     Same as 'get_mean_cost' but <fun> is a vectorized function and costs are computed for all walkers at once.
 
@@ -835,9 +835,9 @@ def get_evaluation_vectorized_mean_cost(fun: Callable,
 def get_walker_vectorized_mean_cost(fun: Callable,
                                     x: np.ndarray,
                                     _n: int,
-                                    args: Tuple,
-                                    previous_evaluations: List[Tuple[int, float]],
-                                    vectorized_skip_marker: Any) -> List[float]:
+                                    args: tuple,
+                                    previous_evaluations: list[tuple[int, float]],
+                                    vectorized_skip_marker: Any) -> list[float]:
     """
     Same as 'get_mean_cost' but <fun> is a vectorized function and costs are computed for all walkers at once but
         sequentially on function evaluations.
@@ -954,7 +954,7 @@ def T(k: int,
 
 
 def get_slots_per_walker(slots: int,
-                         nb_walkers: int) -> List[int]:
+                         nb_walkers: int) -> list[int]:
     """
     Assign to each walker an approximately equal number of slots.
 
@@ -971,10 +971,10 @@ def get_slots_per_walker(slots: int,
 def get_exploration_plan(acceptance: float,
                          nb_slots: int,
                          x: np.ndarray,
-                         list_moves: List['Move'],
-                         list_probabilities: List[float],
+                         list_moves: list['Move'],
+                         list_probabilities: list[float],
                          state: State,
-                         plan: List[np.ndarray]) -> Tuple[int, int, List[np.ndarray]]:
+                         plan: list[np.ndarray]) -> tuple[int, int, list[np.ndarray]]:
     """
     Define an exploration plan : a set of moves (of size <nb_slots>) to take from an initial position vector <x>.
     For low acceptance values, the moves are mostly picked around the original position vector in a star pattern.
