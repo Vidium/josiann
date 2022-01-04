@@ -7,7 +7,7 @@
 import pytest
 import numpy as np
 
-from typing import List, Callable, Optional, Any
+from typing import Callable, Optional, Any
 
 from josiann import sa, Result, Move, RandomStep, Metropolis, Metropolis1D, SetStep, Stretch, StretchAdaptive, \
     SetStretch
@@ -22,11 +22,11 @@ def cost_function(x: np.ndarray) -> float:
     return np.sum(x ** 2) + np.random.normal(0, 3)
 
 
-def vectorized_cost_function(x: np.ndarray) -> List[float]:
+def vectorized_cost_function(x: np.ndarray) -> list[float]:
     return np.sum(x ** 2, axis=1) + np.random.normal(0, 1, size=len(x))
 
 
-def vectorized_deterministic_cost_function(x: np.ndarray) -> List[float]:
+def vectorized_deterministic_cost_function(x: np.ndarray) -> list[float]:
     return list(np.sum(x ** 2, axis=1))
 
 
@@ -233,7 +233,7 @@ def test_deterministic():
 
 
 if __name__ == '__main__':
-    test_RandomStep()
+    # test_RandomStep()
     test_Metropolis()
     test_Metropolis1D()
     test_SetStep()

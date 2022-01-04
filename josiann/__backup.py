@@ -11,8 +11,6 @@ Backup class for storing previously computed costs at visited position vectors.
 import numpy as np
 from multiprocessing.managers import BaseManager, NamespaceProxy  # type: ignore
 
-from typing import Tuple, Dict
-
 
 # ====================================================
 # code
@@ -27,9 +25,9 @@ class Backup:
 
     def __init__(self, active: bool = False):
         self.active = active
-        self.__backup_array: Dict[Tuple, Tuple[int, float]] = {}
+        self.__backup_array: dict[tuple, tuple[int, float]] = {}
 
-    def save(self, position: np.ndarray, evaluation: Tuple[int, float]) -> None:
+    def save(self, position: np.ndarray, evaluation: tuple[int, float]) -> None:
         """
         Store computed function evaluations at given position vector.
 
@@ -40,7 +38,7 @@ class Backup:
         if self.active:
             self.__backup_array[position_tuple] = evaluation
 
-    def get_previous_evaluations(self, position: np.ndarray) -> Tuple[int, float]:
+    def get_previous_evaluations(self, position: np.ndarray) -> tuple[int, float]:
         """
         Get stored last function evaluations at given position vector.
 
@@ -63,14 +61,14 @@ class BackupProxy(NamespaceProxy):
     """
     _exposed_ = ('__getattribute__', '__setattr__', '__delattr__', 'save', 'get_previous_evaluations')
 
-    def save(self, position: np.ndarray, evaluation: Tuple[int, float]) -> None:
+    def save(self, position: np.ndarray, evaluation: tuple[int, float]) -> None:
         """
         Proxy for Backup.save() method.
         """
         callmethod = object.__getattribute__(self, '_callmethod')
         return callmethod(self.save.__name__, (position, evaluation))
 
-    def get_previous_evaluations(self, position: np.ndarray) -> Tuple[int, float]:
+    def get_previous_evaluations(self, position: np.ndarray) -> tuple[int, float]:
         """
         Proxy for Backup.get_previous_evaluations() method.
         """

@@ -14,7 +14,7 @@ import collections.abc
 import numpy as np
 from abc import ABC, abstractmethod
 
-from typing import Optional, Sequence, Tuple, Union, List
+from typing import Optional, Sequence, Union
 
 from .utils import State
 from .name_utils import ShapeError
@@ -30,11 +30,11 @@ class Move(ABC):
     """
 
     def __init__(self,
-                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 bounds: Optional[Sequence[tuple[float, float]]] = None):
         self.__bounds = np.array(bounds) if bounds is not None else None
 
     def set_bounds(self,
-                   bounds: Optional[Union[Tuple[float, float], Sequence[Tuple[float, float]]]]) -> None:
+                   bounds: Optional[Union[tuple[float, float], Sequence[tuple[float, float]]]]) -> None:
         """
         Set bounds for the Move.
 
@@ -81,7 +81,7 @@ class RandomStep(Move):
 
     def __init__(self,
                  magnitude: float,
-                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 bounds: Optional[Sequence[tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
         self.__magnitude = magnitude
 
@@ -114,7 +114,7 @@ class SetStep(Move):
 
     def __init__(self,
                  position_set: Sequence[Sequence[float]],
-                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 bounds: Optional[Sequence[tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
 
         if not all(isinstance(p, (Sequence, np.ndarray)) for p in position_set):
@@ -123,6 +123,7 @@ class SetStep(Move):
 
         self.__position_set = [np.sort(p) for p in position_set]
         self.__reversed_position_set = [v[::-1] for v in self.__position_set]
+        self.__target_dim = 0
 
     def get_proposal(self,
                      x: np.ndarray,
@@ -135,22 +136,25 @@ class SetStep(Move):
 
         :return: new proposed vector x of shape (ndim,)
         """
-        target_dim = np.random.randint(len(x))
         new_x = x.copy()
 
         if np.random.rand() > 0.5:
-            mask = self.__position_set[target_dim] > x[target_dim]
+            mask = self.__position_set[self.__target_dim] > x[self.__target_dim]
             if np.any(mask):
-                new_x[target_dim] = self.__position_set[target_dim][np.argmax(mask)]
+                new_x[self.__target_dim] = self.__position_set[self.__target_dim][np.argmax(mask)]
             else:
-                new_x[target_dim] = x[target_dim]
+                new_x[self.__target_dim] = x[self.__target_dim]
 
         else:
-            mask = self.__reversed_position_set[target_dim] < x[target_dim]
+            mask = self.__reversed_position_set[self.__target_dim] < x[self.__target_dim]
             if np.any(mask):
-                new_x[target_dim] = self.__reversed_position_set[target_dim][np.argmax(mask)]
+                new_x[self.__target_dim] = self.__reversed_position_set[self.__target_dim][np.argmax(mask)]
             else:
-                new_x[target_dim] = x[target_dim]
+                new_x[self.__target_dim] = x[self.__target_dim]
+
+        self.__target_dim += 1
+        if self.__target_dim >= len(x):
+            self.__target_dim = 0
 
         return self._valid_proposal(new_x)
 
@@ -165,7 +169,7 @@ class Metropolis(Move):
     """
 
     def __init__(self,
-                 variances: np.ndarray, bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 variances: np.ndarray, bounds: Optional[Sequence[tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
         self.__cov = np.diag(variances)
 
@@ -193,7 +197,7 @@ class Metropolis1D(Move):
 
     def __init__(self,
                  variance: float,
-                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 bounds: Optional[Sequence[tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
         self.__var = float(variance)
 
@@ -234,7 +238,7 @@ class Stretch(EnsembleMove):
 
     def __init__(self,
                  a: float = 2.,
-                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 bounds: Optional[Sequence[tuple[float, float]]] = None):
         super().__init__(bounds=bounds)
         self._a = a
 
@@ -282,7 +286,7 @@ class StretchAdaptive(Stretch):
 
     def __init__(self,
                  a: float = 2.,
-                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 bounds: Optional[Sequence[tuple[float, float]]] = None):
         super().__init__(a=a, bounds=bounds)
 
     def get_proposal(self,
@@ -320,7 +324,7 @@ class SetStretch(Stretch):
     def __init__(self,
                  position_set: Sequence[Sequence[float]],
                  a: float = 2.,
-                 bounds: Optional[Sequence[Tuple[float, float]]] = None):
+                 bounds: Optional[Sequence[tuple[float, float]]] = None):
         super().__init__(a=a, bounds=bounds)
 
         self.__position_set = [np.sort(p) for p in position_set]
@@ -364,8 +368,8 @@ class SetStretch(Stretch):
 
 
 # functions
-def parse_moves(moves: Union[Move, Sequence[Move], Sequence[Tuple[float, Move]]],
-                nb_walkers: int) -> Tuple[List[float], List[Move]]:
+def parse_moves(moves: Union[Move, Sequence[Move], Sequence[tuple[float, Move]]],
+                nb_walkers: int) -> tuple[list[float], list[Move]]:
     """
     Parse moves given by the user to obtain a list of moves and associated probabilities of drawing those moves.
 

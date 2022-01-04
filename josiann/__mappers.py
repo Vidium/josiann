@@ -16,7 +16,7 @@ from itertools import repeat
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor
 
-from typing import Callable, Any, Tuple, List, Iterable, Sequence, Iterator, cast
+from typing import Callable, Any, Iterable, Sequence, Iterator, cast
 
 from .utils import State, get_mean_cost, get_evaluation_vectorized_mean_cost, get_walker_vectorized_mean_cost, \
     acceptance_log_probability, get_exploration_plan
@@ -31,9 +31,9 @@ def _update_walker(fun: Callable[[np.ndarray, Any], float],
                    cost: float,
                    current_n: int,
                    last_n: int,
-                   args: Tuple,
-                   list_moves: List[Move],
-                   list_probabilities: List[float],
+                   args: tuple,
+                   list_moves: list[Move],
+                   list_probabilities: list[float],
                    iteration: int,
                    max_iter: int,
                    temperature: float,
@@ -41,7 +41,7 @@ def _update_walker(fun: Callable[[np.ndarray, Any], float],
                    _acceptance: float,
                    complementary_set: np.ndarray,
                    backup_storage: Backup,
-                   walker_index: int) -> Tuple[np.ndarray, float, int, bool, int]:
+                   walker_index: int) -> tuple[np.ndarray, float, int, bool, int]:
     """
     Update the position of a walker by picking a move in the list of available moves and accepting the proposed new
         position based on the new cost.
@@ -84,22 +84,22 @@ def _update_walker(fun: Callable[[np.ndarray, Any], float],
     return x, cost, last_n, False, walker_index
 
 
-def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], List[float]],
+def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], list[float]],
                               x: np.ndarray,
                               costs: Sequence[float],
                               current_n: int,
                               last_ns: Sequence[int],
-                              args: Tuple,
-                              list_moves: List[Move],
-                              list_probabilities: List[float],
+                              args: tuple,
+                              list_moves: list[Move],
+                              list_probabilities: list[float],
                               iteration: int,
                               max_iter: int,
                               temperature: float,
-                              nb_slots: List[int],
+                              nb_slots: list[int],
                               acceptance: float,
                               backup_storage: Backup,
                               vectorized_on_evaluations: bool,
-                              vectorized_skip_marker: Any) -> Iterator[Tuple[np.ndarray, float, int, bool, int]]:
+                              vectorized_skip_marker: Any) -> Iterator[tuple[np.ndarray, float, int, bool, int]]:
     """
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
     available moves and accepting the proposed new position based on the new cost.
@@ -252,12 +252,12 @@ class VectorizedExecutor(Executor):
         """
         return _vectorized_update_walker(fn,
                                          x=cast(np.ndarray, iterables[0]),                              # type: ignore
-                                         costs=cast(List[float], iterables[1]),                         # type: ignore
+                                         costs=cast(list[float], iterables[1]),                         # type: ignore
                                          current_n=cast(int, next(iterables[2])),                       # type: ignore
-                                         last_ns=cast(List[int], iterables[3]),                         # type: ignore
-                                         args=cast(Tuple, next(iterables[4])),                          # type: ignore
-                                         list_moves=cast(List[Move], next(iterables[5])),               # type: ignore
-                                         list_probabilities=cast(List[float], next(iterables[6])),      # type: ignore
+                                         last_ns=cast(list[int], iterables[3]),                         # type: ignore
+                                         args=cast(tuple, next(iterables[4])),                          # type: ignore
+                                         list_moves=cast(list[Move], next(iterables[5])),               # type: ignore
+                                         list_probabilities=cast(list[float], next(iterables[6])),      # type: ignore
                                          iteration=cast(int, next(iterables[7])),                       # type: ignore
                                          max_iter=cast(int, next(iterables[8])),                        # type: ignore
                                          temperature=cast(float, next(iterables[9])),                   # type: ignore
