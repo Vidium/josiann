@@ -20,7 +20,8 @@ class Backup:
         when using SetStep moves since they offer a decent probability of hitting the exact same position vector
         twice whereas this probability is ~0 for over moves.
 
-    :param active: set this backup object to active ? (don't store anything if inactive.)
+    Args:
+        active: set this backup object to active ? (don't store anything if inactive.)
     """
 
     def __init__(self, active: bool = False):
@@ -31,8 +32,9 @@ class Backup:
         """
         Store computed function evaluations at given position vector.
 
-        :param position: position vector of the function evaluations.
-        :param evaluation: function evaluation: number of evaluations, mean of evaluations.
+        Args:
+            position: position vector of the function evaluations.
+            evaluation: function evaluation: number of evaluations, mean of evaluations.
         """
         position_tuple = tuple(position)
         if self.active:
@@ -42,9 +44,11 @@ class Backup:
         """
         Get stored last function evaluations at given position vector.
 
-        :param position: position vector of the function evaluations.
+        Args:
+            position: position vector of the function evaluations.
 
-        :return: stored function evaluation: number of evaluations, mean of evaluations. (defaults to (0, 0))
+        Returns:
+            Stored function evaluation: number of evaluations, mean of evaluations. (defaults to (0, 0)).
         """
         return self.__backup_array.get(tuple(position), (0, 0.))
 

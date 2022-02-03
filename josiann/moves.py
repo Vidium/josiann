@@ -26,7 +26,8 @@ class Move(ABC):
     """
     Base abstract class for defining how positions evolve in the SA algorithm.
 
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -38,8 +39,9 @@ class Move(ABC):
         """
         Set bounds for the Move.
 
-        :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension or a single
-            (min, max) tuple of bounds to set for all dimensions.
+        Args:
+            bounds: optional sequence of (min, max) bounds for values to propose in each dimension or a single
+                (min, max) tuple of bounds to set for all dimensions.
         """
         self.__bounds = np.array(bounds) if bounds is not None else None
 
@@ -50,10 +52,12 @@ class Move(ABC):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
 
     def _valid_proposal(self,
@@ -61,8 +65,11 @@ class Move(ABC):
         """
         Get valid proposal within defined bounds.
 
-        :param x: a 'raw' proposal.
-        :return: a proposal with values restricted with the defined bounds.
+        Args:
+            a 'raw' proposal.
+
+        Returns
+            A proposal with values restricted with the defined bounds.
         """
         if self.__bounds is not None:
             return np.minimum(np.maximum(x, self.__bounds[:, 0]), self.__bounds[:, 1])
@@ -70,13 +77,14 @@ class Move(ABC):
         return x
 
 
-# Moves independent from other walkers
+# Moves independent of other walkers
 class RandomStep(Move):
     """
     Simple random step within a radius of (-0.5 * magnitude) to (+0.5 * magnitude) around x.
 
-    :param magnitude: size of the random step is (-0.5 * magnitude) to (+0.5 * magnitude)
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        magnitude: size of the random step is (-0.5 * magnitude) to (+0.5 * magnitude)
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -91,10 +99,12 @@ class RandomStep(Move):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
         target_dim = np.random.randint(len(x))
         increment = np.zeros(len(x))
@@ -108,8 +118,9 @@ class SetStep(Move):
     Step within a fixed set of possible values for x. For each dimension, the position immediately before or after x
         will be chosen at random when stepping.
 
-    :param position_set: sets of only possible values for x in each dimension.
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        position_set: sets of only possible values for x in each dimension.
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -131,10 +142,12 @@ class SetStep(Move):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
         new_x = x.copy()
 
@@ -163,9 +176,10 @@ class Metropolis(Move):
     """
     Metropolis step obtained from a multivariate normal distribution with mean <x> and covariance matrix <variances>
 
-    :param variances: list of variances between dimensions, which will be set as the diagonal of the covariance
-        matrix.
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        variances: list of variances between dimensions, which will be set as the diagonal of the covariance
+            matrix.
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -179,20 +193,23 @@ class Metropolis(Move):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
         return self._valid_proposal(np.random.multivariate_normal(x, self.__cov))
 
 
 class Metropolis1D(Move):
     """
-    Metropolis step obtained from a univariate normal distribution with mean <x> and variance <variance>
+    Metropolis step obtained from a uni-variate normal distribution with mean <x> and variance <variance>
 
-    :param variance: the variance.
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        variance: the variance.
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -207,10 +224,12 @@ class Metropolis1D(Move):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
         target_dim = np.random.randint(len(x))
         x[target_dim] = np.random.normal(x[target_dim], self.__var)
@@ -231,9 +250,10 @@ class Stretch(EnsembleMove):
     """
     Stretch move as defined in 'Goodman, J., Weare, J., 2010, Comm. App. Math. and Comp. Sci., 5, 65'
 
-    :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
-        while bigger values make samples more spread out with a peak getting closer to 0.
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
+            while bigger values make samples more spread out with a peak getting closer to 0.
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -249,9 +269,11 @@ class Stretch(EnsembleMove):
              |  1 / sqrt(z)     if z in [1/a, a]
              |  0               otherwise
 
-        :param a: parameter for tuning the distribution of Z.
+        Args:
+            a: parameter for tuning the distribution of Z.
 
-        :return: a sample from Z.
+        Returns:
+            A sample from Z.
         """
         return (np.random.rand() * a + 2) ** 2 / (4 * a)
 
@@ -261,10 +283,12 @@ class Stretch(EnsembleMove):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
         # pick X_j at random from the complementary set
         x_j = state.complementary_set[np.random.randint(0, len(state.complementary_set))]
@@ -279,9 +303,10 @@ class StretchAdaptive(Stretch):
     Stretch move as defined in 'Goodman, J., Weare, J., 2010, Comm. App. Math. and Comp. Sci., 5, 65' with decreasing
     'a' parameter.
 
-    :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
-        while bigger values make samples more spread out with a peak getting closer to 0.
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
+            while bigger values make samples more spread out with a peak getting closer to 0.
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -295,10 +320,12 @@ class StretchAdaptive(Stretch):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
         # pick X_j at random from the complementary set
         x_j = state.complementary_set[np.random.randint(0, len(state.complementary_set))]
@@ -312,13 +339,14 @@ class StretchAdaptive(Stretch):
 
 class SetStretch(Stretch):
     """
-    Fusion of the Set and Stretch moves. We exploit multiple walkers in parallel an move each to the closest point
+    Fusion of the Set and Stretch moves. We exploit multiple walkers in parallel a move each to the closest point
         in the set of possible positions instead of the point proposed by the stretch.
 
-    :param position_set: sets of only possible values for x in each dimension.
-    :param a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
-        while bigger values make samples more spread out with a peak getting closer to 0.
-    :param bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+    Args:
+        position_set: sets of only possible values for x in each dimension.
+        a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
+            while bigger values make samples more spread out with a peak getting closer to 0.
+        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
     def __init__(self,
@@ -332,11 +360,13 @@ class SetStretch(Stretch):
     def _find_nearest(self,
                       vector: np.ndarray):
         """
-        Find nearest values in <array> for each element in <vector>.
+        Find the nearest values in <array> for each element in <vector>.
 
-        :param vector: an array of values for which to find nearest values.
+        Args:
+            vector: an array of values for which to find the nearest values.
 
-        :return: an array with nearest values from <vector> in <array>.
+        Returns:
+            An array with the nearest values from <vector> in <array>.
         """
         for index, value in enumerate(vector):
             vector[index] = self.__position_set[index][np.nanargmin(np.abs(self.__position_set[index] - value))]
@@ -349,10 +379,12 @@ class SetStretch(Stretch):
         """
         Generate a new proposed vector x.
 
-        :param x: current vector x of shape (ndim,)
-        :param state: current state of the SA algorithm.
+        Args:
+            x: current vector x of shape (ndim,).
+            state: current state of the SA algorithm.
 
-        :return: new proposed vector x of shape (ndim,)
+        Returns:
+            New proposed vector x of shape (ndim,).
         """
         # pick X_j at random from the complementary set
         x_j = state.complementary_set[np.random.randint(0, len(state.complementary_set))]
@@ -373,11 +405,13 @@ def parse_moves(moves: Union[Move, Sequence[Move], Sequence[tuple[float, Move]]]
     """
     Parse moves given by the user to obtain a list of moves and associated probabilities of drawing those moves.
 
-    :param moves: a single Move object, a sequence of Moves (uniform probabilities are assumed on all Moves) or a
-        sequence of tuples with format (probability: float, Move).
-    :param nb_walkers: the number of parallel walkers in the ensemble.
+    Args:
+        moves: a single Move object, a sequence of Moves (uniform probabilities are assumed on all Moves) or a
+            sequence of tuples with format (probability: float, Move).
+        nb_walkers: the number of parallel walkers in the ensemble.
 
-    :return: the list of probabilities and the list of associated moves.
+    Returns:
+        The list of probabilities and the list of associated moves.
     """
     if not isinstance(moves, collections.abc.Sequence) or isinstance(moves, str):
         if isinstance(moves, Move):

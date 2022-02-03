@@ -11,11 +11,11 @@ This package provides an implementation of the simulated annealing method for mi
 # imports
 from .sa import sa
 from .moves import Move, RandomStep, Metropolis, Metropolis1D, Stretch, StretchAdaptive, SetStep, SetStretch
-from .utils import Result, Trace
+from .storage import Result, Trace
 
 # ====================================================
 # code
 __all__ = ['sa', 'Move',
            'RandomStep', 'Metropolis', 'Metropolis1D', 'SetStep',
            'Stretch', 'StretchAdaptive', 'SetStretch',
-           'Result', 'Trace']
+           'Trace', 'Result']

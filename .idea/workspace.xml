@@ -1,11 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="fix test">
-      <change beforePath="$PROJECT_DIR$/.idea/josiann.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/josiann.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="c2a61b0b-a078-4b1b-baef-2df498e5f3d4" name="Default Changelist" comment="ready for python 3.9">
+      <change afterPath="$PROJECT_DIR$/josiann/storage/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/josiann/storage/parameters.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/josiann/storage/result.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/josiann/storage/trace.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/tests/tmp.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/__backup.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__backup.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/josiann/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__init__.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/__mappers.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/__mappers.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/moves.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/moves.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/josiann/sa.py" beforeDir="false" afterPath="$PROJECT_DIR$/josiann/sa.py" afterDir="false" />
@@ -41,33 +45,33 @@
   <component name="Git.Settings">
     <option name="RECENT_BRANCH_BY_REPOSITORY">
       <map>
-        <entry key="$PROJECT_DIR$" value="master" />
+        <entry key="$PROJECT_DIR$" value="b4e1e4ddb01f36d7eb74e077cb38ceb4d422c6dc" />
       </map>
     </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
     <option name="UPDATE_TYPE" value="REBASE" />
   </component>
   <component name="HighlightingSettingsPerFile">
-    <setting file="file://$PROJECT_DIR$/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/tests/tests_vdata/test_VData_read.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/indexers.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/name_utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/__backup.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/__mappers.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/utils.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/josiann/tests/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/moves.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/josiann/sa.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/.drone.yml" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/vdata/_read_write/read.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../Real_platform/app/pages/home/callbacks/home_main_callbacks.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/views/dataframe.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="notebook:///home/matteo/git/vdata/tests/fix_vdata.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/vdataframe.py" root0="FORCE_HIGHLIGHTING" />
-    <setting file="file://$PROJECT_DIR$/../vdata/vdata/utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/__backup.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/__mappers.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/.drone.yml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/moves.py" root0="FORCE_HIGHLIGHTING" />
     <setting file="file://$PROJECT_DIR$/../vdata/.drone.yml" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/sa.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="notebook:///home/matteo/git/vdata/tests/fix_vdata.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/indexers.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/tests/tests_vdata/test_VData_read.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/TDF/views/dataframe.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../Real_platform/app/pages/home/callbacks/home_main_callbacks.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="notebook:///home/matteo/git/josiann/tests/test_1.ipynb" root0="FORCE_HIGHLIGHTING" root1="FORCE_HIGHLIGHTING" root2="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/vdataframe.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/.mypy.ini" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/josiann/name_utils.py" root0="FORCE_HIGHLIGHTING" />
+    <setting file="file://$PROJECT_DIR$/../vdata/vdata/_core/utils.py" root0="FORCE_HIGHLIGHTING" />
   </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
@@ -95,13 +99,14 @@
   </component>
   <component name="RecentsManager">
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/josiann/storage" />
       <recent name="$PROJECT_DIR$/josiann" />
       <recent name="$PROJECT_DIR$" />
       <recent name="$PROJECT_DIR$/single" />
       <recent name="$PROJECT_DIR$/ensemble" />
     </key>
   </component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Shell Script.test.sh">
     <configuration default="true" type="PythonConfigurationType" factoryName="Python">
       <module name="josiann" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -131,9 +136,9 @@
       <envs>
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
-      <option name="IS_MODULE_SDK" value="true" />
+      <option name="SDK_HOME" value="$USER_HOME$/anaconda3/envs/pyREAL/bin/python" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/test" />
+      <option name="IS_MODULE_SDK" value="false" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
@@ -146,6 +151,46 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="tmp" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="josiann" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tests" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tests/tmp.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="true" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test.sh" type="ShConfigurationType" temporary="true">
+      <option name="SCRIPT_TEXT" value="" />
+      <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/test.sh" />
+      <option name="SCRIPT_OPTIONS" value="" />
+      <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+      <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
+      <option name="INTERPRETER_PATH" value="/bin/bash" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="EXECUTE_IN_TERMINAL" value="true" />
+      <option name="EXECUTE_SCRIPT_FILE" value="true" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Shell Script.test.sh" />
+        <item itemvalue="Python.tmp" />
+      </list>
+    </recent_temporary>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -176,11 +221,14 @@
       <workItem from="1632908376806" duration="159000" />
       <workItem from="1632923074060" duration="627000" />
       <workItem from="1632929842883" duration="8005000" />
-      <workItem from="1632988943797" duration="5857000" />
-      <workItem from="1633878273462" duration="1396000" />
-      <workItem from="1634558887866" duration="59000" />
-      <workItem from="1641290488960" duration="929000" />
-      <workItem from="1641320924486" duration="644000" />
+      <workItem from="1632988943797" duration="5249000" />
+      <workItem from="1641397565809" duration="561000" />
+      <workItem from="1642781655663" duration="860000" />
+      <workItem from="1643879578043" duration="9171000" />
+      <workItem from="1643897546133" duration="6322000" />
+      <workItem from="1643904380712" duration="34000" />
+      <workItem from="1643904422110" duration="14000" />
+      <workItem from="1643904474399" duration="401000" />
     </task>
     <task id="LOCAL-00001" summary="logic update from Toth et al 2020">
       <created>1627491569795</created>
@@ -287,14 +335,7 @@
       <option name="project" value="LOCAL" />
       <updated>1633002636041</updated>
     </task>
-    <task id="LOCAL-00016" summary="fix test">
-      <created>1633002777400</created>
-      <option name="number" value="00016" />
-      <option name="presentableId" value="LOCAL-00016" />
-      <option name="project" value="LOCAL" />
-      <updated>1633002777400</updated>
-    </task>
-    <option name="localTasksCounter" value="17" />
+    <option name="localTasksCounter" value="16" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -328,7 +369,9 @@
     <MESSAGE value="implemented vectorization on walkers" />
     <MESSAGE value="fix walker vectorization" />
     <MESSAGE value="mypy fixes" />
-    <MESSAGE value="fix test" />
-    <option name="LAST_COMMIT_MESSAGE" value="fix test" />
+    <option name="LAST_COMMIT_MESSAGE" value="mypy fixes" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/josiann$tmp.coverage" NAME="tmp Coverage Results" MODIFIED="1643901932565" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/tests" />
   </component>
 </project>
