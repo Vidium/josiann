@@ -46,24 +46,26 @@ def _update_walker(fun: Callable[[np.ndarray, Any], float],
     Update the position of a walker by picking a move in the list of available moves and accepting the proposed new
         position based on the new cost.
 
-    :param fun: a <d> dimensional (noisy) function to minimize.
-    :param x: current position vector for the walker to update.
-    :param cost: cost evaluated at last position vector.
-    :param current_n: current required number of evaluations.
-    :param last_n: number of evaluations required when the last position vector was accepted.
-    :param args: a tuple of arguments to pass to the function to minimize.
-    :param list_moves: a list of available moves to pick at random.
-    :param list_probabilities: a list of corresponding probabilities of picking the move.
-    :param iteration: the current iteration number.
-    :param max_iter: the maximum number of iterations.
-    :param temperature: the current temperature.
-    :param _nb_slots: NOT USED HERE.
-    :param _acceptance: NOT USED HERE.
-    :param complementary_set: the set of position vectors from walkers other than the one to update.
-    :param backup_storage: a Backup object for storing previously computed positions.
-    :param walker_index: the index of the walker to update.
+    Args:
+        fun: a <d> dimensional (noisy) function to minimize.
+        x: current position vector for the walker to update.
+        cost: cost evaluated at last position vector.
+        current_n: current required number of evaluations.
+        last_n: number of evaluations required when the last position vector was accepted.
+        args: a tuple of arguments to pass to the function to minimize.
+        list_moves: a list of available moves to pick at random.
+        list_probabilities: a list of corresponding probabilities of picking the move.
+        iteration: the current iteration number.
+        max_iter: the maximum number of iterations.
+        temperature: the current temperature.
+        _nb_slots: NOT USED HERE.
+        _acceptance: NOT USED HERE.
+        complementary_set: the set of position vectors from walkers other than the one to update.
+        backup_storage: a Backup object for storing previously computed positions.
+        walker_index: the index of the walker to update.
 
-    :return: the updated position vector, cost, number of evaluations and whether the move was accepted.
+    Returns:
+        The updated position vector, cost, number of evaluations and whether the move was accepted.
     """
     # pick a move at random from available moves
     move = np.random.choice(list_moves, p=list_probabilities)
@@ -104,26 +106,28 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], list[float]],
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
     available moves and accepting the proposed new position based on the new cost.
 
-    :param fun: a <d> dimensional vectorized (noisy) function to minimize.
-    :param x: current position vectors for the walkers to update of shape (nb_walkers,).
-    :param costs: set of costs evaluated at last position vectors of shape (nb_walkers,).
-    :param current_n: current required number of evaluations.
-    :param last_ns: set of number of evaluations required when the last position vectors were accepted of shape
+    Args:
+        fun: a <d> dimensional vectorized (noisy) function to minimize.
+        x: current position vectors for the walkers to update of shape (nb_walkers,).
+        costs: set of costs evaluated at last position vectors of shape (nb_walkers,).
+        current_n: current required number of evaluations.
+        last_ns: set of number of evaluations required when the last position vectors were accepted of shape
         (nb_walkers,).
-    :param args: a tuple of arguments to pass to the function to minimize.
-    :param list_moves: a list of available moves to pick at random.
-    :param list_probabilities: a list of corresponding probabilities of picking the move.
-    :param iteration: the current iteration number.
-    :param max_iter: the maximum number of iterations.
-    :param temperature: the current temperature.
-    :param nb_slots: the list of slots per walker.
-    :param acceptance: the current acceptance fraction.
-    :param backup_storage: a Backup object for storing previously computed positions.
-    :param vectorized_on_evaluations: vectorize <fun> calls on evaluations (or walkers) ?
-    :param vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
+        args: a tuple of arguments to pass to the function to minimize.
+        list_moves: a list of available moves to pick at random.
+        list_probabilities: a list of corresponding probabilities of picking the move.
+        iteration: the current iteration number.
+        max_iter: the maximum number of iterations.
+        temperature: the current temperature.
+        nb_slots: the list of slots per walker.
+        acceptance: the current acceptance fraction.
+        backup_storage: a Backup object for storing previously computed positions.
+        vectorized_on_evaluations: vectorize <fun> calls on evaluations (or walkers) ?
+        vectorized_skip_marker: when vectorizing on walkers, the object to pass to <fun> to indicate that an
         evaluation for a particular position vector can be skipped.
 
-    :return: an iterator over the updated position vectors, costs, number of evaluations and whether the move were
+    Returns:
+        An iterator over the updated position vectors, costs, number of evaluations and whether the move were
         accepted.
     """
     states = [State(complementary_set=np.delete(x, walker_index), iteration=iteration, max_iter=max_iter)
@@ -201,10 +205,12 @@ class Executor(ABC):
         """
         Returns an iterator equivalent to map(fn, *iter) for iter in iterables.
 
-        :param fn: a function to evaluate.
-        :param iterables: a sequence of iterables to pass to <fn>.
+        Args:
+            fn: a function to evaluate.
+            iterables: a sequence of iterables to pass to <fn>.
 
-        :return: an iterator over map(fn, *iter).
+        Returns:
+            An iterator over map(fn, *iter).
         """
 
 
@@ -220,10 +226,12 @@ class LinearExecutor(Executor):
         """
         Returns an iterator equivalent to map(fn, *iter) for iter in iterables.
 
-        :param fn: a function to evaluate.
-        :param iterables: a sequence of iterables to pass to <fn>.
+        Args:
+            fn: a function to evaluate.
+            iterables: a sequence of iterables to pass to <fn>.
 
-        :return: an iterator over map(fn, *iter).
+        Returns:
+            An iterator over map(fn, *iter).
         """
         complementary_sets = [np.delete(kwargs['positions'], walker_index)
                               for walker_index in range(len(kwargs['positions']))]
@@ -245,10 +253,12 @@ class VectorizedExecutor(Executor):
         """
         Returns an iterator equivalent to map(fn, *iter) for iter in iterables.
 
-        :param fn: a vectorized function to evaluate.
-        :param iterables: a sequence of iterables to pass to <fn>.
+        Args:
+            fn: a vectorized function to evaluate.
+            iterables: a sequence of iterables to pass to <fn>.
 
-        :return: an iterator over map(fn, *iter).
+        Returns:
+            an iterator over map(fn, *iter).
         """
         return _vectorized_update_walker(fn,
                                          x=cast(np.ndarray, iterables[0]),                              # type: ignore
@@ -288,12 +298,14 @@ class ParallelExecutor(ProcessPoolExecutor):
         """
         Returns an iterator equivalent to map(fn, *iter) for iter in iterables.
 
-        :param fn: a function to evaluate.
-        :param iterables: a sequence of iterables to pass to <fn>.
-        :param timeout:
-        :param chunksize:
+        Args:
+            fn: a function to evaluate.
+            iterables: a sequence of iterables to pass to <fn>.
+            timeout:
+            chunksize:
 
-        :return: an iterator over map(fn, *iter).
+        Returns:
+            An iterator over map(fn, *iter).
         """
         complementary_sets = [np.delete(kwargs['positions'], walker_index)
                               for walker_index in range(len(kwargs['positions']))]
