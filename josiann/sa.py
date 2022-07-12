@@ -9,6 +9,7 @@ Core Simulated Annealing function.
 # ====================================================
 # imports
 import time
+import traceback
 import numpy as np
 from tqdm import tqdm
 from itertools import repeat
@@ -58,11 +59,11 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
             (lower_bound, upper_bound)
             or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
         moves: either
-                    - a single josiann.SingleMove object
-                    - a sequence of josiann.SingleMove objects (all Moves have the same probability of being selected at
+                    - a single josiann.Move object
+                    - a sequence of josiann.Move objects (all Moves have the same probability of being selected at
                         each step for proposing a new candidate vector x)
                     - a sequence of tuples with the following format :
-                        (selection probability, josiann.SingleMove)
+                        (selection probability, josiann.Move)
                         In this case, the selection probability dictates the probability of each Move of being
                         selected at each step.
         nb_walkers: the number of parallel walkers in the ensemble.
@@ -129,7 +130,9 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
     last_ns = params.last_ns
 
     # initialize the trace history keeper
-    trace = Trace(params.base.max_iter, x.shape, window_size=params.window_size,
+    trace = Trace(params.base.max_iter, x.shape,
+                  window_size=params.window_size,
+                  bounds=np.array(bounds),
                   detect_convergence=params.base.detect_convergence)
     trace.initialize(x, costs)
 
@@ -177,6 +180,8 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
                                  vectorized_on_evaluations=params.parallel.vectorized_on_evaluations,
                                  vectorized_skip_marker=params.parallel.vectorized_skip_marker)
 
+                explored = np.zeros((params.parallel.nb_walkers, params.base.nb_dimensions + 1))
+
                 for _x, _cost, _last_n, _accepted, _walker_index in updates:
                     if _accepted:
                         x[_walker_index] = _x
@@ -184,8 +189,11 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
                         last_ns[_walker_index] = _last_n
                         accepted[_walker_index] = _accepted
 
+                    explored[_walker_index] = np.concatenate((_x, [_last_n]))
+
                 index = trace.store(x, costs, temperature, current_n,
-                                    sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon), accepted)
+                                    sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon),
+                                    accepted, explored)
 
                 best_position, best_cost, best_index = trace.get_best()
                 stuck_walkers = trace.are_stuck()
@@ -219,8 +227,8 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
             else:
                 message, success = 'Requested number of iterations reached.', False
 
-        except Exception as e:
-            message, success = f'Unexpected failure : \n{e}', False
+        except Exception:
+            message, success = f'Unexpected failure : \n{traceback.format_exc()}', False
 
     trace.finalize()
 

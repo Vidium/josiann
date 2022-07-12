@@ -4,13 +4,15 @@
 
 # ====================================================
 # imports
-from .parameters import SAParameters, initialize_sa
+from .parameters import MoveParameters, SAParameters, initialize_sa, check_base_parameters_core, \
+    check_bounds
 from .result import Result
 from .trace import Trace
 
 # ====================================================
 # code
 
-__all__ = ['SAParameters', 'initialize_sa',
+__all__ = ['MoveParameters', 'SAParameters',
+           'initialize_sa', 'check_base_parameters_core', 'check_bounds',
            'Result',
            'Trace']

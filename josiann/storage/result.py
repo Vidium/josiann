@@ -27,10 +27,7 @@ class Result:
     x_iter: list[int] = field(init=False)
 
     def __post_init__(self):
-        # try:
         self.x, self.x_cost, self.x_iter = self.trace.get_best()
-        # except Exception:
-        #     self.x, self.x_cost, self.x_iter = np.nan, np.nan, [np.nan, np.nan]
 
     def __repr__(self) -> str:
         return f"Message : {self.message}\n" \

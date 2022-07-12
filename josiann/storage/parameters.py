@@ -4,6 +4,8 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numbers
 import collections.abc
 import numpy as np
@@ -11,13 +13,16 @@ from warnings import warn
 from multiprocessing import cpu_count
 from dataclasses import dataclass, field
 
-from typing import Sequence, Optional, Union, Callable, Any
+from typing import Sequence, Optional, Union, Callable, Any, TYPE_CHECKING
 
 from ..name_utils import ShapeError
 from ..utils import get_slots_per_walker, get_evaluation_vectorized_mean_cost, get_walker_vectorized_mean_cost, \
     get_mean_cost
 from ..moves import Move, SetStep, SetStretch, parse_moves
 from ..__backup import Backup
+
+if TYPE_CHECKING:
+    from josiann.parallel.storage import ParallelBaseParameters, ParallelParallelParameters
 
 
 # ====================================================
@@ -57,6 +62,10 @@ class BaseParameters:
     @property
     def x(self) -> np.ndarray:
         return self.x0.copy()
+
+    @property
+    def nb_dimensions(self) -> int:
+        return self.x0.shape[1]
 
 
 @dataclass(frozen=True)
@@ -118,8 +127,8 @@ class SAParameters:
     """
     Object for storing the parameters used for running the SA algorithm.
     """
-    base: BaseParameters
-    parallel: ParallelParameters
+    base: BaseParameters | ParallelBaseParameters
+    parallel: ParallelParameters | ParallelParallelParameters
     moves: MoveParameters
     fun: Callable[[np.ndarray, Any], Union[list[float], float]]
     backup: Backup = field(repr=False)
@@ -133,13 +142,59 @@ class SAParameters:
         object.__setattr__(self, 'active_backup', self.backup.active)
 
     def __repr__(self) -> str:
-        return f"{self.base}" \
+        return f"{self.base}\n" \
                f"{self.parallel}\n" \
                f"Moves:\n{self.moves}\n" \
                f"Function: {self.fun.__name__}\n" \
                f"Window size: {self.window_size}\n" \
                f"Seed: {self.seed}\n" \
                f"Backup: {'active' if self.active_backup else 'no'}\n"  # type: ignore
+
+
+def check_base_parameters_core(T_0: float,
+                               epsilon: float,
+                               final_acceptance_probability: float,
+                               max_iter: int,
+                               max_measures: int,
+                               suppress_warnings: bool,
+                               tol: float,
+                               x0: np.ndarray,
+                               dtype: np.dtype) -> tuple[float, float, int, int, float, np.ndarray]:
+    # max iterations
+    if max_iter < 0:
+        raise ValueError("'max_iter' parameter must be positive.")
+
+    # max function evaluations
+    if max_measures < 0:
+        raise ValueError("'max_measures' parameter must be positive.")
+
+    # final acceptance probability
+    if final_acceptance_probability < 0 or final_acceptance_probability > 1:
+        raise ValueError(f"Invalid value '{final_acceptance_probability}' for 'final_acceptance_probability', "
+                         f"should be in [0, 1].")
+
+    # epsilon
+    if epsilon <= 0 or epsilon >= 1:
+        raise ValueError(f"Invalid value '{epsilon}' for 'epsilon', should be in (0, 1).")
+
+    # T 0
+    if T_0 < 0:
+        raise ValueError("'T_0' parameter must be at least 0.")
+
+    # tolerance
+    if tol <= 0:
+        raise ValueError("'tol' parameter must be strictly positive.")
+
+    # max sigma
+    T_final = -1 / np.log(final_acceptance_probability)
+    alpha = (T_final / T_0) ** (1 / max_iter)
+    sigma_max = np.sqrt((max_measures - 1) * T_0 * alpha * (1 - epsilon)) / 3
+
+    # suppress warnings
+    if not suppress_warnings and max_iter < 200:
+        warn('It is not recommended running the SA algorithm with less than 200 iterations.')
+
+    return float(T_0), alpha, int(max_iter), int(max_measures), sigma_max, x0.astype(dtype)
 
 
 def check_base_parameters(args: Optional[Sequence],
@@ -193,48 +248,10 @@ def check_base_parameters(args: Optional[Sequence],
 
         x0 = np.array([x0[i] + np.random.uniform(-0.5e-10, 0.5e-10) for i in range(len(x0))])
 
-    x0 = x0.astype(np.float32)
-
-    # max iterations
-    if max_iter < 0:
-        raise ValueError("'max_iter' parameter must be positive.")
-
-    max_iter = int(max_iter)
-
-    # max function evaluations
-    if max_measures < 0:
-        raise ValueError("'max_measures' parameter must be positive.")
-
-    max_measures = int(max_measures)
-
-    # final acceptance probability
-    if final_acceptance_probability < 0 or final_acceptance_probability > 1:
-        raise ValueError(f"Invalid value '{final_acceptance_probability}' for 'final_acceptance_probability', "
-                         f"should be in [0, 1].")
-
-    # epsilon
-    if epsilon <= 0 or epsilon >= 1:
-        raise ValueError(f"Invalid value '{epsilon}' for 'epsilon', should be in (0, 1).")
-
-    # T 0
-    if T_0 < 0:
-        raise ValueError("'T_0' parameter must be at least 0.")
-
-    T_0 = float(T_0)
-
-    # tolerance
-    if tol <= 0:
-        raise ValueError("'tol' parameter must be strictly positive.")
-
-    # max sigma
-    T_final = -1 / np.log(final_acceptance_probability)
-    alpha = (T_final / T_0) ** (1 / max_iter)
-
-    sigma_max = np.sqrt((max_measures - 1) * T_0 * alpha * (1 - epsilon)) / 3
-
-    # suppress warnings
-    if not suppress_warnings and max_iter < 200:
-        warn('It is not recommended running the SA algorithm with less than 200 iterations.')
+    T_0, alpha, max_iter, max_measures, sigma_max, x0 = check_base_parameters_core(T_0, epsilon,
+                                                                                   final_acceptance_probability,
+                                                                                   max_iter, max_measures,
+                                                                                   suppress_warnings, tol, x0)
 
     return BaseParameters(args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol,
                           alpha, sigma_max, suppress_warnings, detect_convergence)
