@@ -224,7 +224,7 @@ class SetStep(Move):
 
         self._target_dim += 1
         if self._target_dim >= len(x):
-            self.__target_dim = 0
+            self._target_dim = 0
 
         return new_x
 

@@ -234,7 +234,7 @@ def test_deterministic():
 
 
 if __name__ == '__main__':
-    # test_RandomStep()
+    test_RandomStep()
     test_Metropolis()
     test_Metropolis1D()
     test_SetStep()

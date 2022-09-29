@@ -207,13 +207,13 @@ class ParallelTrace(Trace):
             titles += ["n at cost evaluation"] + ['' for _ in range(self.nb_walkers-1)]
             titles += ["Best cost evolution"] + ['' for _ in range(self.nb_walkers-1)]
         for i in range(self.nb_dimensions):
-            titles += [f'Dimension {i}'] + ['' for _ in range(self.nb_walkers-1)]
+            titles += [f'Dimension {i} (converged : {self.converged[w]})' for w in range(self.nb_walkers)]
 
         fig = make_subplots(rows=self.nb_dimensions + supp_plots, cols=self.nb_walkers,
                             shared_xaxes='all',
                             subplot_titles=titles,
                             vertical_spacing=0.5 / (1.5 * (self.nb_dimensions + supp_plots) - 0.5),
-                            horizontal_spacing=0.1)
+                            horizontal_spacing=0)
 
         for w in range(self.nb_walkers):
             # -----------------------------------------------------------------

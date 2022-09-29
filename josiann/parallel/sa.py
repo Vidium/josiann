@@ -7,9 +7,8 @@
 from __future__ import annotations
 
 import time
-import traceback
 import numpy as np
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 
 from typing import Callable, Sequence, Any
 
@@ -22,9 +21,9 @@ from .moves import ParallelMove, ParallelSetStep
 
 # ====================================================
 # code
-def parallel_sa(fun: Callable[[np.ndarray, Any], float | list[float]],
+def parallel_sa(fun: Callable[[np.ndarray, ...], float | list[float]],
                 x0: np.ndarray,
-                parallel_args: Sequence[np.ndarray] | None,
+                parallel_args: Sequence[np.ndarray] | None = None,
                 args: Sequence[Any] | None = None,
                 bounds: Sequence[tuple[float, float]] | None = None,
                 moves: ParallelMove | Sequence[ParallelMove] | Sequence[tuple[float, ParallelMove]] = ParallelSetStep(

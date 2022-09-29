@@ -207,7 +207,8 @@ def check_base_parameters(args: Optional[Sequence],
                           T_0: float,
                           tol: float,
                           suppress_warnings: bool,
-                          detect_convergence: bool) -> BaseParameters:
+                          detect_convergence: bool,
+                          dtype: np.dtype) -> BaseParameters:
     """
     Check validity of base parameters.
 
@@ -224,6 +225,7 @@ def check_base_parameters(args: Optional[Sequence],
         tol: the convergence tolerance.
         suppress_warnings: remove warnings ?
         detect_convergence: run convergence detection for an early stop of the algorithm ? (default True)
+        dtype: the data type for the values stored in the Trace.
 
     Returns:
         BaseParameters.
@@ -251,7 +253,7 @@ def check_base_parameters(args: Optional[Sequence],
     T_0, alpha, max_iter, max_measures, sigma_max, x0 = check_base_parameters_core(T_0, epsilon,
                                                                                    final_acceptance_probability,
                                                                                    max_iter, max_measures,
-                                                                                   suppress_warnings, tol, x0)
+                                                                                   suppress_warnings, tol, x0, dtype)
 
     return BaseParameters(args, x0, max_iter, max_measures, final_acceptance_probability, epsilon, T_0, tol,
                           alpha, sigma_max, suppress_warnings, detect_convergence)
@@ -374,7 +376,8 @@ def initialize_sa(args: Optional[Sequence],
                   suppress_warnings: bool,
                   detect_convergence: bool,
                   window_size: Optional[int],
-                  seed: int) -> SAParameters:
+                  seed: int,
+                  dtype: np.dtype) -> SAParameters:
     """
     Check validity of parameters and compute initial values before running the SA algorithm.
 
@@ -416,13 +419,14 @@ def initialize_sa(args: Optional[Sequence],
         window_size: number of past iterations to look at for detecting the convergence, getting the best position
             and computing the acceptance fraction.
         seed: a seed for the random generator.
+        dtype: the data type for the values stored in the Trace.
 
     Returns:
         Valid parameters and initial values.
     """
     # base parameters
     base_parameters = check_base_parameters(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability,
-                                            epsilon, T_0, tol, suppress_warnings, detect_convergence)
+                                            epsilon, T_0, tol, suppress_warnings, detect_convergence, dtype)
 
     # parallel parameters
     parallel_parameters = check_parallel_parameters(nb_walkers, nb_cores, vectorized, vectorized_on_evaluations,

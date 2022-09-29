@@ -136,6 +136,9 @@ def check_base_parameters(parallel_args: Sequence[np.ndarray] | None,
 
         x0 = np.array([x0])
 
+    elif nb_parallel_problems is None:
+        nb_parallel_problems = len(x0)
+
     elif len(x0) != nb_parallel_problems:
         raise ValueError(f"'x0' defines {len(x0)} parallel problems while the parallel arguments define "
                          f"{nb_parallel_problems} parallel problems.")

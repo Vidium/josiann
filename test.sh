@@ -1,16 +1,16 @@
 #!/bin/bash
 
 echo "-- FLAKE8 ------------------------------"
-flake8 --config .tox.ini ./josiann
-echo
+#flake8 --config .tox.ini ./josiann
+#echo
 
 echo "-- MYPY --------------------------------"
-mypy --config-file .mypy.ini ./josiann
-echo
+#mypy --config-file .mypy.ini ./josiann
+#echo
 
 echo "-- PYLINT ------------------------------"
-pylint ./josiann
-echo
+#pylint ./josiann
+#echo
 
 echo "-- PYTEST ------------------------------"
-python -m pytest -v ./tests/test_sa.py
+python -m pytest -v --cov=josiann ./tests/test_sa.py

@@ -212,6 +212,22 @@ class Trace(ABC):
         """
         pass
 
+    def plot_positions(self,
+                       save: Path | None = None,
+                       true_values: np.ndarray | None = None,
+                       extended: bool = False,
+                       show: bool = True) -> None:
+        """
+        Plot reached positions and costs for the vector to optimize along iterations.
+
+        Args:
+            save: optional path to save the plot as a html file.
+            true_values: an optional sequence of known true values for each dimension of the vector to optimize.
+            extended: plot additional plots ? (mostly for debugging)
+            show: render the plot ? (default True)
+        """
+        pass
+
 
 class OneTrace(Trace):
     """

@@ -11,14 +11,14 @@ Core Simulated Annealing function.
 import time
 import traceback
 import numpy as np
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 from itertools import repeat
 
 from typing import Callable, Optional, Sequence, Union, Any, Type
 
 from .utils import n, T, sigma
 from .moves import Move, RandomStep
-from .storage import Trace, Result, initialize_sa
+from .storage import OneTrace, Result, initialize_sa
 from .__mappers import LinearExecutor, VectorizedExecutor, ParallelExecutor
 
 
@@ -47,7 +47,8 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
        verbose: bool = True,
        suppress_warnings: bool = False,
        detect_convergence: bool = True,
-       window_size: Optional[int] = None) -> Result:
+       window_size: Optional[int] = None,
+       dtype: np.dtype = np.float64) -> Result:
     """
     Simulated Annealing for minimizing noisy cost functions.
 
@@ -112,6 +113,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
         detect_convergence: run convergence detection for an early stop of the algorithm ? (default True)
         window_size: number of past iterations to look at for detecting the convergence, getting the best position
             and computing the acceptance fraction.
+        dtype: the data type for the values stored in the Trace. (default np.float64)
 
     Returns:
         A Result object.
@@ -123,17 +125,17 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
     params = initialize_sa(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability, epsilon,
                            T_0, tol, moves, bounds, fun, nb_cores, vectorized, vectorized_on_evaluations,
                            vectorized_skip_marker, backup, nb_slots, suppress_warnings, detect_convergence,
-                           window_size, seed)
+                           window_size, seed, dtype)
 
     x = params.base.x
     costs = params.costs
     last_ns = params.last_ns
 
     # initialize the trace history keeper
-    trace = Trace(params.base.max_iter, x.shape,
-                  window_size=params.window_size,
-                  bounds=np.array(bounds),
-                  detect_convergence=params.base.detect_convergence)
+    trace = OneTrace(params.base.max_iter, x.shape,
+                     window_size=params.window_size,
+                     bounds=np.array(bounds),
+                     detect_convergence=params.base.detect_convergence)
     trace.initialize(x, costs)
 
     if verbose:
@@ -180,7 +182,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
                                  vectorized_on_evaluations=params.parallel.vectorized_on_evaluations,
                                  vectorized_skip_marker=params.parallel.vectorized_skip_marker)
 
-                explored = np.zeros((params.parallel.nb_walkers, params.base.nb_dimensions + 1))
+                explored = np.zeros((params.parallel.nb_walkers, params.base.nb_dimensions))
 
                 for _x, _cost, _last_n, _accepted, _walker_index in updates:
                     if _accepted:
@@ -189,7 +191,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
                         last_ns[_walker_index] = _last_n
                         accepted[_walker_index] = _accepted
 
-                    explored[_walker_index] = np.concatenate((_x, [_last_n]))
+                    explored[_walker_index] = _x
 
                 index = trace.store(x, costs, temperature, current_n,
                                     sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon),
@@ -227,7 +229,7 @@ def sa(fun: Callable[[np.ndarray, Any], Union[float, list[float]]],
             else:
                 message, success = 'Requested number of iterations reached.', False
 
-        except Exception:
+        except Exception as e:
             message, success = f'Unexpected failure : \n{traceback.format_exc()}', False
 
     trace.finalize()
