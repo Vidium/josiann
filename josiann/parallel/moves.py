@@ -84,21 +84,27 @@ class ParallelSetStep(ParallelMove):
         """
         new_x = x.copy().astype(self._dtype)
 
+        # loop on vectors in x
         for index in range(len(x)):
+            # for each, draw at random if the position increases ...
             if np.random.rand() > 0.5:
                 mask = self._position_set[self._target_dim] > x[index, self._target_dim]
                 if np.any(mask):
                     new_x[index, self._target_dim] = self._position_set[self._target_dim][np.argmax(mask)]
+                # boundary hit : cannot go higher than the highest value --> go down instead
                 else:
-                    new_x[index, self._target_dim] = x[index, self._target_dim]
+                    new_x[index, self._target_dim] = self._position_set[self._target_dim][-2]
 
+            # ... or decreases
             else:
                 mask = self._reversed_position_set[self._target_dim] < x[index, self._target_dim]
                 if np.any(mask):
                     new_x[index, self._target_dim] = self._reversed_position_set[self._target_dim][np.argmax(mask)]
+                # boundary hit : cannot go lower than the lowest value --> go up instead
                 else:
-                    new_x[index, self._target_dim] = x[index, self._target_dim]
+                    new_x[index, self._target_dim] = self._position_set[self._target_dim][1]
 
+        # next time, update the position for the next dimension of the vector
         self._target_dim += 1
         if self._target_dim >= x.shape[1]:
             self._target_dim = 0
