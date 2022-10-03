@@ -44,7 +44,7 @@ def get_vectorized_mean_cost(fun: Callable,
     all_parallel_args = () if parallel_args is None else [np.repeat(arg[~converged], remaining_ns)
                                                           for arg in parallel_args]
 
-    all_evaluations = fun(all_x, *all_parallel_args, *args)
+    all_evaluations = fun(all_x, converged, *all_parallel_args, *args)
 
     evaluations = []
     evaluation_index_start = 0

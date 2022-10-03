@@ -37,6 +37,7 @@ def parallel_sa(fun: Callable[[np.ndarray, ...], float | list[float]],
                 backup: bool = False,
                 seed: int | None = None,
                 verbose: bool = True,
+                leave_progress_bar: bool = True,
                 suppress_warnings: bool = False,
                 detect_convergence: bool = True,
                 window_size: int | None = None,
@@ -73,6 +74,8 @@ def parallel_sa(fun: Callable[[np.ndarray, ...], float | list[float]],
             the same position vector ? (Only available when using SetStep moves).
         seed: a seed for the random generator.
         verbose: print progress bar ? (default True)
+        leave_progress_bar: leave progress bar after the algorithm has completed (only works if verbose) ?
+            (default True)
         suppress_warnings: remove warnings ? (default False)
         detect_convergence: run convergence detection for an early stop of the algorithm ? (default True)
         window_size: number of past iterations to look at for detecting the convergence, getting the best position
@@ -104,7 +107,7 @@ def parallel_sa(fun: Callable[[np.ndarray, ...], float | list[float]],
     trace.initialize(x, costs)
 
     if verbose:
-        progress_bar = tqdm(range(params.base.max_iter), unit='iteration')
+        progress_bar = tqdm(range(params.base.max_iter), unit='iteration', leave=leave_progress_bar)
     else:
         progress_bar = range(params.base.max_iter)
 
