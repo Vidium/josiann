@@ -11,6 +11,8 @@ import plotly.graph_objects as go
 from pathlib import Path
 from plotly.subplots import make_subplots
 
+from typing import Sequence
+
 from josiann.name_utils import ShapeError
 from josiann.storage import Trace
 
@@ -44,6 +46,7 @@ class ParallelTrace(Trace):
 
         self._best_position_trace = np.zeros((nb_iterations, self.nb_walkers, self.nb_dimensions + 2), dtype=np.float32)
         self._converged = np.array([False for _ in range(self.nb_walkers)])
+        self._converged_at_iteration = -1 * np.ones(self.nb_walkers)
 
     def __repr__(self) -> str:
         return f"Parallel trace of {self._iteration_counter} iteration(s), {self.nb_walkers} parallel problem(s) and " \
@@ -95,7 +98,7 @@ class ParallelTrace(Trace):
 
         self._computation_time[index] = computation_time
 
-        self._update_convergence()
+        self._update_convergence(index)
 
     def finalize(self) -> None:
         """
@@ -105,9 +108,13 @@ class ParallelTrace(Trace):
 
         self._best_position_trace = self._best_position_trace[:self.position_counter]
 
-    def _update_convergence(self) -> None:
+    def _update_convergence(self,
+                            iteration: int) -> None:
         """
         For each parallel problem, has the cost trace reached convergence within a tolerance margin ?
+
+        Args:
+            iteration: current iteration number.
         """
         if self._iteration_counter < self._window_size or not self._detect_convergence:
             return
@@ -121,6 +128,9 @@ class ParallelTrace(Trace):
         )
 
         self._converged |= (RMSD < self._convergence_tolerance)
+
+        self._converged_at_iteration[(RMSD < self._convergence_tolerance) & (self._converged_at_iteration == -1)] = \
+            iteration
 
     def get_best(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
@@ -150,11 +160,14 @@ class ParallelTrace(Trace):
 
         # normalize lookup array to account for variance drop
         current_n = self._n_trace[self._iteration_counter - 1]
-        with np.errstate(divide='ignore'):
+        with np.errstate(divide='ignore', invalid='ignore'):
             correction_factors = current_n / self._cost_trace_n[max(START, self.position_counter -
                                                                     self._window_size):self.position_counter]
 
-        lookup_array *= correction_factors
+            lookup_array *= correction_factors
+
+        # replace nan values with max in array so that nanargmin() does not fail
+        lookup_array[np.isnan(lookup_array)] = np.nanmax(lookup_array)
 
         _best_indices = np.nanargmin(lookup_array, axis=0) + start_lookup_index
         
@@ -184,7 +197,8 @@ class ParallelTrace(Trace):
                        save: Path | None = None,
                        true_values: np.ndarray | None = None,
                        extended: bool = False,
-                       show: bool = True) -> None:
+                       show: bool = True,
+                       subplot_titles: Sequence[str] | None = None) -> None:
         """
         Plot reached positions and costs for the vector to optimize along iterations.
 
@@ -193,6 +207,7 @@ class ParallelTrace(Trace):
             true_values: an optional sequence of known true values for each dimension of the vector to optimize.
             extended: plot additional plots ? (mostly for debugging)
             show: render the plot ? (default True)
+            subplot_titles: an optional list of sub-plot titles, one title per parallel problem. (default None)
         """
         if true_values is not None:
             if true_values.ndim != 2:
@@ -201,13 +216,21 @@ class ParallelTrace(Trace):
                 raise ShapeError(f'The vector of true values should have {self.nb_walkers}x{self.nb_dimensions} '
                                  f'values.')
 
+        if subplot_titles is not None:
+            if len(subplot_titles) != self.nb_walkers:
+                raise ShapeError(f'Expected {self.nb_walkers} sub-plot titles, got {len(subplot_titles)}.')
+
         supp_plots = 3 if extended else 1
         titles = ["Costs"] + ['' for _ in range(self.nb_walkers-1)]
         if extended:
             titles += ["n at cost evaluation"] + ['' for _ in range(self.nb_walkers-1)]
             titles += ["Best cost evolution"] + ['' for _ in range(self.nb_walkers-1)]
         for i in range(self.nb_dimensions):
-            titles += [f'Dimension {i} (converged : {self.converged[w]})' for w in range(self.nb_walkers)]
+            if subplot_titles is not None:
+                titles += [f'{subplot_titles[i]} (converged : {self.converged[w]})' for w in range(self.nb_walkers)]
+
+            else:
+                titles += [f'Dimension {i} (converged : {self.converged[w]})' for w in range(self.nb_walkers)]
 
         fig = make_subplots(rows=self.nb_dimensions + supp_plots, cols=self.nb_walkers,
                             shared_xaxes='all',
@@ -319,6 +342,17 @@ class ParallelTrace(Trace):
                                          legendgroup='Best cost'),
                               row=d + supp_plots + 1, col=w+1)
 
+                # add convergence line
+                fig.add_shape(go.layout.Shape(type="line",
+                                              yref="paper",
+                                              xref="x",
+                                              x0=self._converged_at_iteration[w],
+                                              y0=0,
+                                              x1=self._converged_at_iteration[w],
+                                              y1=10,
+                                              line=dict(color='firebrick', width=3)),
+                              row=d + supp_plots + 1, col=w+1)
+
                 if true_values is not None:
                     fig.add_trace(go.Scatter(x=[0, self.nb_positions - 1],
                                              y=[true_values[w, d], true_values[w, d]],
@@ -353,7 +387,9 @@ class ParallelTrace(Trace):
         fig['layout'].update(height=400 * (self.nb_dimensions + 2),
                              width=400 * self.nb_walkers,
                              margin=dict(t=40, b=10, l=10, r=10),
-                             xaxis_range=[0, self.nb_positions - 1], template='plotly_white')
+                             xaxis_range=[0, self.nb_positions - 1],
+                             template='plotly_white',
+                             showlegend=False)
 
         if show:
             fig.show()

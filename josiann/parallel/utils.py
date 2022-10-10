@@ -37,6 +37,8 @@ def get_vectorized_mean_cost(fun: Callable,
     Returns:
         The mean of function evaluations at x.
     """
+    # TODO : switch to median
+
     remaining_ns = _n - np.array([last_n for last_n, _ in previous_evaluations])
 
     all_x = np.repeat(x, remaining_ns, axis=0)

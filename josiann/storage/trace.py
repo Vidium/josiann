@@ -216,7 +216,8 @@ class Trace(ABC):
                        save: Path | None = None,
                        true_values: np.ndarray | None = None,
                        extended: bool = False,
-                       show: bool = True) -> None:
+                       show: bool = True,
+                       subplot_titles: Sequence[str] | None = None) -> None:
         """
         Plot reached positions and costs for the vector to optimize along iterations.
 
@@ -225,6 +226,7 @@ class Trace(ABC):
             true_values: an optional sequence of known true values for each dimension of the vector to optimize.
             extended: plot additional plots ? (mostly for debugging)
             show: render the plot ? (default True)
+            subplot_titles: an optional list of sub-plot titles, one title per dimension. (default None)
         """
         pass
 
@@ -421,7 +423,8 @@ class OneTrace(Trace):
                        save: Path | None = None,
                        true_values: Sequence[float] | None = None,
                        extended: bool = False,
-                       show: bool = True) -> None:
+                       show: bool = True,
+                       subplot_titles: Sequence[str] | None = None) -> None:
         """
         Plot reached positions and costs for the vector to optimize along iterations.
 
@@ -430,12 +433,26 @@ class OneTrace(Trace):
             true_values: an optional sequence of known true values for each dimension of the vector to optimize.
             extended: plot additional plots ? (mostly for debugging)
             show: render the plot ? (default True)
+            subplot_titles: an optional list of sub-plot titles, one title per dimension. (default None)
         """
         if true_values is not None and len(true_values) != self.nb_dimensions:
-            raise ShapeError(f'The vector of true values should have {self.nb_dimensions} dimensions, not {len(true_values)}.')
+            raise ShapeError(f'The vector of true values should have {self.nb_dimensions} dimensions, '
+                             f'not {len(true_values)}.')
+
+        if subplot_titles is not None:
+            if len(subplot_titles) != self.nb_dimensions:
+                raise ShapeError(f'Expected {self.nb_dimensions} sub-plot titles, got {len(subplot_titles)}.')
 
         supp_plots = 3 if extended else 1
-        titles = ["Costs"] + [f'Dimension {i}' for i in range(self.nb_dimensions)]
+
+        titles = ["Costs"]
+
+        if subplot_titles is not None:
+            titles += [f'{subplot_titles[i]}' for i in range(self.nb_dimensions)]
+
+        else:
+            titles += [f'Dimension {i}' for i in range(self.nb_dimensions)]
+
         if extended:
             titles.insert(1, "n at cost evaluation")
             titles.insert(2, "Best cost evolution")
