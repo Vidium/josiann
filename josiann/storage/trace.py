@@ -58,6 +58,11 @@ class Trace(ABC):
     def __repr__(self) -> str:
         pass
 
+    @property
+    @abstractmethod
+    def converged(self) -> np.ndarray:
+        pass
+
     def initialize(self,
                    position: np.ndarray,
                    costs: list[float]) -> None:
@@ -250,6 +255,10 @@ class OneTrace(Trace):
     def __repr__(self):
         return f"Trace of {self._iteration_counter} iteration(s), {self.nb_walkers} walker(s) and " \
                f"{self.nb_dimensions} dimension(s)."
+
+    @property
+    def converged(self) -> np.ndarray:
+        raise NotImplementedError
 
     def initialize(self,
                    position: np.ndarray,

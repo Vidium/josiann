@@ -37,7 +37,7 @@ class ParallelSetStep(ParallelMove):
     """
 
     def __init__(self,
-                 position_set: Sequence[Sequence[float]],
+                 position_set: Sequence[np.ndarray],
                  bounds: Sequence[tuple[float, float]] | None = None):
         super().__init__(bounds=bounds)
 

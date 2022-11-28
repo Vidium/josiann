@@ -21,7 +21,7 @@ from .moves import ParallelMove, ParallelSetStep
 
 # ====================================================
 # code
-def parallel_sa(fun: Callable[[np.ndarray, ...], float | list[float] | np.ndarray],
+def parallel_sa(fun: Callable[[Any, ...], float | list[float] | np.ndarray],
                 x0: np.ndarray,
                 parallel_args: Sequence[np.ndarray] | None = None,
                 args: Sequence[Any] | None = None,
