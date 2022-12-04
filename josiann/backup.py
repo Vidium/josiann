@@ -9,12 +9,21 @@ Backup class for storing previously computed costs at visited position vectors.
 # ====================================================
 # imports
 import numpy as np
-from multiprocessing.managers import BaseManager, NamespaceProxy  # type: ignore
+from abc import ABC
+from abc import abstractmethod
+from multiprocessing.managers import BaseManager, NamespaceProxy        # type: ignore
+
+from typing import Generic
+from typing import TypeVar
 
 
 # ====================================================
 # code
-class Backup:
+EVALUATION = tuple[int, float]
+_T = TypeVar('_T', EVALUATION, list[EVALUATION])
+
+
+class Backup(ABC, Generic[_T]):
     """
     Object for storing previously computed function evaluations at given position vectors. This is only available
         when using SetStep moves since they offer a decent probability of hitting the exact same position vector
@@ -24,11 +33,21 @@ class Backup:
         active: set this backup object to active ? (don't store anything if inactive.)
     """
 
-    def __init__(self, active: bool = False):
+    # region magic methods
+    def __init__(self,
+                 active: bool):
         self.active = active
-        self.__backup_array: dict[tuple, tuple[int, float]] = {}
 
-    def save(self, position: np.ndarray, evaluation: tuple[int, float]) -> None:
+    def __repr__(self) -> str:
+        return f"Backup: {'active' if self.active else 'no'}"
+
+    # endregion
+
+    # region methods
+    @abstractmethod
+    def save(self,
+             position: np.ndarray,
+             evaluation: _T) -> None:
         """
         Store computed function evaluations at given position vector.
 
@@ -36,11 +55,10 @@ class Backup:
             position: position vector of the function evaluations.
             evaluation: function evaluation: number of evaluations, mean of evaluations.
         """
-        position_tuple = tuple(position)
-        if self.active:
-            self.__backup_array[position_tuple] = evaluation
 
-    def get_previous_evaluations(self, position: np.ndarray) -> tuple[int, float]:
+    @abstractmethod
+    def get_previous_evaluations(self,
+                                 position: np.ndarray) -> _T:
         """
         Get stored last function evaluations at given position vector.
 
@@ -50,7 +68,50 @@ class Backup:
         Returns:
             Stored function evaluation: number of evaluations, mean of evaluations. (defaults to (0, 0)).
         """
-        return self.__backup_array.get(tuple(position), (0, 0.))
+
+    # endregion
+
+
+class SequentialBackup(Backup):
+
+    # region magic methods
+    def __init__(self,
+                 active: bool = False):
+        super().__init__(active)
+
+        self._backup_array: dict[tuple, tuple[int, float]] = {}
+
+    # endregion
+
+    # region methods
+    def save(self,
+             position: np.ndarray,
+             evaluation: EVALUATION) -> None:
+        """
+        Store computed function evaluations at given position vector.
+
+        Args:
+            position: position vector of the function evaluations.
+            evaluation: function evaluation: number of evaluations, mean of evaluations.
+        """
+        position_tuple = tuple(position)
+        if self.active:
+            self._backup_array[position_tuple] = evaluation
+
+    def get_previous_evaluations(self,
+                                 position: np.ndarray) -> EVALUATION:
+        """
+        Get stored last function evaluations at given position vector.
+
+        Args:
+            position: position vector of the function evaluations.
+
+        Returns:
+            Stored function evaluation: number of evaluations, mean of evaluations. (defaults to (0, 0)).
+        """
+        return self._backup_array.get(tuple(position), (0, 0.))
+
+    # endregion
 
 
 class BackupManager(BaseManager):
@@ -80,4 +141,4 @@ class BackupProxy(NamespaceProxy):
         return callmethod(self.get_previous_evaluations.__name__, (position,))
 
 
-BackupManager.register('Backup', Backup, BackupProxy)
+BackupManager.register('SequentialBackup', SequentialBackup, BackupProxy)

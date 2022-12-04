@@ -4,726 +4,498 @@
 
 # ====================================================
 # imports
-from __future__ import annotations
-
 import numpy as np
 import plotly.graph_objects as go
 from pathlib import Path
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
 from plotly.subplots import make_subplots
 
 from typing import Sequence
 
-from josiann.name_utils import ShapeError
+from josiann.errors import ShapeError
+from josiann.sequential.intialize import SequentialSAParameters
+from josiann.storage.parameters import SAParameters
 
 
 # ====================================================
 # code
-class Trace(ABC):
-    """
-    Object for storing the trace history of an SA run.
-    """
+@dataclass
+class Position:
+    x: np.ndarray                   # (nb_walkers, nb_dimensions)
+    cost: np.ndarray                # (nb_walkers,)
+    n: np.ndarray                   # (nb_walkers,)
 
+
+class PositionTrace:
+
+    # region magic methods
     def __init__(self,
+                 run_parameters: SAParameters,
                  nb_iterations: int,
-                 shape: tuple[int, int],
-                 window_size: int,
-                 bounds: np.ndarray,
-                 detect_convergence: bool):
+                 nb_walkers: int,
+                 nb_dimensions: int,
+                 initial_position: np.ndarray,
+                 initial_cost: np.ndarray):
         """
         Args:
             nb_iterations: number of expected iterations for the SA algorithm.
-            shape: shape of the matrices to store (nb_walkers, d).
-            window_size: size of the window of values to test for convergence.
+            nb_walkers: number of walkers in parallel.
+            nb_dimensions: number of dimensions per problem.
+            initial_position: initial positions before running the SA algorithm.
+            initial_cost: cost of initial positions.
         """
-        nb_walkers, nb_dimensions = shape[0], shape[1]
+        self.parameters = run_parameters
+        self.nb_walkers = nb_walkers
+        self.nb_dimensions = nb_dimensions
 
-        self._position_trace = np.zeros((nb_iterations, nb_walkers, nb_dimensions), dtype=np.float32)
-        self._cost_trace = np.zeros((nb_iterations, nb_walkers), dtype=np.float32)
-        self._cost_trace_n = np.zeros((nb_iterations, nb_walkers), dtype=np.int32)
-        self._temperature_trace = np.zeros(nb_iterations, dtype=np.float32)
-        self._n_trace = np.zeros(nb_iterations, dtype=np.int32)
-        self._sigma_trace = np.zeros(nb_iterations, dtype=np.float32)
-        self._accepted = np.zeros((nb_iterations, nb_walkers), dtype=np.float32)
-        self._explored = np.zeros((nb_iterations, nb_walkers, nb_dimensions), dtype=np.float32)
-        self._computation_time = np.zeros(nb_iterations, dtype=np.float32)
+        # /!\ store nb_iter + 1 values (initial values + iterations)
+        self.position_trace = np.zeros((nb_iterations + 1, nb_walkers, nb_dimensions), dtype=np.float32)
+        self.explored_trace = np.zeros((nb_iterations + 1, nb_walkers, nb_dimensions), dtype=np.float32)
+        self.best_position_trace = np.zeros((nb_iterations + 1, nb_walkers, nb_dimensions + 2), dtype=np.float32)
+        self.cost_trace = np.zeros((nb_iterations + 1, nb_walkers), dtype=np.float32)
+        self.cost_trace_n = np.zeros((nb_iterations + 1, nb_walkers), dtype=np.int32)
+        self.explored_cost_trace = np.zeros((nb_iterations + 1, nb_walkers), dtype=np.float32)
+        self._accepted = np.zeros((nb_iterations + 1, nb_walkers), dtype=bool)
+        self.rescued = np.zeros((nb_iterations + 1, nb_walkers), dtype=np.float32)
 
-        self._initialized = False
-        self._detect_convergence = detect_convergence
-        self._window_size = window_size
-        self._bounds = bounds
-        self._iteration_counter = 0
+        self.converged_at_iteration = -1 * np.ones(nb_walkers)
 
-    @abstractmethod
-    def __repr__(self) -> str:
-        pass
+        # store initial values
+        self.position_trace[0] = initial_position
+        self.explored_trace[0] = initial_position
+        self.cost_trace[0] = initial_cost
+        self.cost_trace_n[0] = 1
+        self.explored_cost_trace[0] = initial_cost
+        self._accepted[0] = True
+
+        self._set_best(-1, 1)
+
+    # endregion
+
+    # region attributes
+    @property
+    def converged(self) -> np.ndarray:
+        return self.converged_at_iteration > -1
 
     @property
-    @abstractmethod
-    def converged(self) -> np.ndarray:
-        pass
+    def nb_iterations(self) -> int:
+        return self.position_trace.shape[0] - 1
 
-    def initialize(self,
-                   position: np.ndarray,
-                   costs: list[float]) -> None:
-        """
-        Save state zero before running the SA algorithm. This function should be called before actually storing run
-            values.
+    # endregion
 
-        Args:
-            position: the initial vector.
-            costs: the initial costs.
+    # region methods
+    def finalize(self,
+                 iteration: int) -> None:
         """
-        self._initialized = True
-
-        self._position_trace = np.concatenate((np.array([position.copy()]), self._position_trace))
-        self._cost_trace = np.concatenate((np.array([costs]), self._cost_trace))
-        self._cost_trace_n = np.concatenate((np.array([[0 for _ in range(len(position))]]),
-                                             self._cost_trace_n))
-        self._explored = np.concatenate((np.zeros([1, self.nb_walkers, self.nb_dimensions]), self._explored))
-
-    def finalize(self) -> None:
+        Cleanup trace at the end of the SA algorithm.
         """
-        Cleanup traces at the end of the SA algorithm.
-        """
-        self._position_trace = self._position_trace[:self.position_counter]
-        self._cost_trace = self._cost_trace[:self.position_counter]
-        self._cost_trace_n = self._cost_trace_n[:self.position_counter]
-        self._temperature_trace = self._temperature_trace[:self._iteration_counter]
-        self._n_trace = self._n_trace[:self._iteration_counter]
-        self._sigma_trace = self._sigma_trace[:self._iteration_counter]
-        self._accepted = self._accepted[:self._iteration_counter]
-        self._computation_time = self._computation_time[:self._iteration_counter]
-        self._explored = self._explored[:self.position_counter]
+        self.position_trace = self.position_trace[:iteration + 2]
+        self.explored_trace = self.explored_trace[:iteration + 2]
+        self.best_position_trace = self.best_position_trace[:iteration + 2]
+        self.cost_trace = self.cost_trace[:iteration + 2]
+        self.cost_trace_n = self.cost_trace_n[:iteration + 2]
+        self.explored_cost_trace = self.explored_cost_trace[:iteration + 2]
+        self._accepted = self._accepted[:iteration + 2]
+        self.rescued = self.rescued[:iteration + 2]
 
     def store(self,
+              iteration: int,
               position: np.ndarray,
-              costs: list[float],
-              temperature: float,
-              _n: int,
-              _sigma: float,
-              accepted: list[bool],
-              explored: np.ndarray) -> int:
+              costs: np.ndarray,
+              current_n: int,
+              accepted: np.ndarray,
+              explored: np.ndarray,
+              explored_costs: np.ndarray) -> None:
         """
         Save the current position of the vector to optimize, the current cost, temperature and number of averaged
             function evaluations.
 
         Args:
-            position: the current vector.
+            iteration: iteration index for storing the data.
+            position: the current positions.
             costs: the current costs.
-            temperature: the current temperature.
-            _n: the current number of averaged function evaluations.
-            _sigma: the current estimated standard deviation.
+            current_n: the current number of averaged function evaluations.
             accepted: were the current propositions accepted ?
             explored: the array of explored propositions.
+            explored_costs: costs associated to explored positions.
 
         Returns:
             The index at which was stored the data.
         """
-        self._position_trace[self.position_counter] = position.copy()
-        self._cost_trace[self.position_counter] = np.array(costs)
-        self._temperature_trace[self._iteration_counter] = float(temperature)
-        self._n_trace[self._iteration_counter] = int(_n)
-        self._sigma_trace[self._iteration_counter] = float(_sigma)
-        self._accepted[self._iteration_counter] = np.array(accepted)
+        self.position_trace[iteration + 1] = position
+        self.explored_trace[iteration + 1] = explored
 
-        accepted_n = np.ones(self.nb_walkers) * _n
-        rejected_mask = np.where(~np.array(accepted))[0]
-        accepted_n[rejected_mask] = self._cost_trace_n[self.position_counter - 1, rejected_mask]
-        self._cost_trace_n[self.position_counter] = accepted_n
+        self.cost_trace[iteration + 1] = costs
+        self.explored_cost_trace[iteration + 1] = explored_costs
 
-        self._explored[self.position_counter] = explored
+        self.cost_trace_n[iteration + 1, accepted] = current_n
+        self.cost_trace_n[iteration + 1, ~accepted] = self.cost_trace_n[iteration, ~accepted]
 
-        self._iteration_counter += 1
-        return self._iteration_counter - 1
+        self._accepted[iteration + 1] = accepted
 
-    @property
-    def nb_walkers(self) -> int:
-        """
-        Get the number of parallel walkers.
-
-        :return: The number of parallel walkers.
-        """
-        return self._position_trace.shape[1]
-
-    @property
-    def nb_dimensions(self) -> int:
-        """
-        Get the number of dimensions of the vector to optimize.
-
-        :return: The number of dimensions of the vector to optimize.
-        """
-        return self._position_trace.shape[2]
-
-    @property
-    def nb_positions(self) -> int:
-        """
-        Get the number of saved positions.
-
-        :return: The number of saved positions.
-        """
-        return self._position_trace.shape[0]
-
-    @property
-    def nb_iterations(self) -> int:
-        """
-        Get the number of elapsed iterations.
-
-        :return: The number of elapsed iterations.
-        """
-        return self._temperature_trace.shape[0]
-
-    @property
-    def position_counter(self) -> int:
-        """
-        Get the position pointer for saving new positions.
-
-        :return: The position pointer.
-        """
-        return self._iteration_counter + 1 * self._initialized
-
-    @abstractmethod
-    def get_best(self) -> tuple[np.ndarray, float, list[int]] | tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Get the best vector with associated cost and iteration at which it was reached.
-
-        Returns:
-            The best vector, the best cost and iteration number that reached it.
-        """
-        pass
-
-    def get_position_trace(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Get traces for vector, cost values, n at cost evaluation and best vector along iterations.
-
-        :return: Traces for vector, cost values, n at cost evaluation and best vector along iterations.
-        """
-        return self._position_trace, self._cost_trace, self._cost_trace_n, self._best_position_trace
-
-    def get_parameters_trace(self) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Get traces related to parameters values along iterations.
-
-        :return: Traces related to parameters values along iterations.
-        """
-        return self._temperature_trace, self._n_trace, self._sigma_trace
-
-    @abstractmethod
-    def get_acceptance_trace(self) -> np.ndarray | tuple[np.ndarray, np.ndarray]:
-        """
-        Get traces related to acceptance rates along iterations.
-
-        :return: Traces related to acceptance rates along iterations.
-        """
-        pass
-
-    def plot_positions(self,
-                       save: Path | None = None,
-                       true_values: np.ndarray | None = None,
-                       extended: bool = False,
-                       show: bool = True,
-                       subplot_titles: Sequence[str] | None = None) -> None:
-        """
-        Plot reached positions and costs for the vector to optimize along iterations.
-
-        Args:
-            save: optional path to save the plot as a html file.
-            true_values: an optional sequence of known true values for each dimension of the vector to optimize.
-            extended: plot additional plots ? (mostly for debugging)
-            show: render the plot ? (default True)
-            subplot_titles: an optional list of sub-plot titles, one title per dimension. (default None)
-        """
-        pass
-
-
-class OneTrace(Trace):
-    """
-    Object for storing the trace history of an SA run.
-    """
-
-    def __init__(self,
-                 nb_iterations: int,
-                 shape: tuple[int, int],
-                 window_size: int,
-                 bounds: np.ndarray,
-                 detect_convergence: bool):
-        super().__init__(nb_iterations, shape, window_size, bounds, detect_convergence)
-
-        self._best_position_trace = np.zeros((nb_iterations, self.nb_dimensions + 3), dtype=np.float32)
-        self._rescued = np.zeros((nb_iterations, self.nb_walkers), dtype=np.float32)
-
-    def __repr__(self):
-        return f"Trace of {self._iteration_counter} iteration(s), {self.nb_walkers} walker(s) and " \
-               f"{self.nb_dimensions} dimension(s)."
-
-    @property
-    def converged(self) -> np.ndarray:
-        raise NotImplementedError
-
-    def initialize(self,
-                   position: np.ndarray,
-                   costs: list[float]) -> None:
-        """
-        Save state zero before running the SA algorithm. This function should be called before actually storing run
-            values.
-
-        Args:
-            position: the initial vector.
-            costs: the initial costs.
-        """
-        super().initialize(position, costs)
-
-        best_index = np.argmin(costs)
-        self._best_position_trace = np.concatenate(([np.append(position.copy()[best_index],
-                                                               [costs[best_index], best_index, 0])],
-                                                    self._best_position_trace))
+        self._set_best(iteration, current_n)
+        self._update_convergence(iteration)
 
     def update(self,
-               index: int,
+               iteration: int,
                position: np.ndarray,
-               costs: list[float],
-               rescued: list[bool],
-               best_position: np.ndarray,
-               best_cost: float,
-               best_index: list[int],
-               computation_time: float) -> None:
+               costs: np.ndarray,
+               last_ns: np.ndarray,
+               rescued: np.ndarray) -> None:
         """
         Updates positions and costs. Also store new information.
 
         Args:
-            index: index at which to update the data.
+            iteration: iteration index for storing the data.
             position: the current vector.
             costs: the current costs.
+            last_ns: the number of averaged function evaluations.
             rescued: were the walkers rescued at this iteration ?
-            best_position: best position vector reached since the start of the SA algorithm.
-            best_cost: cost associated to the best position.
-            best_index: tuple (iteration, walker index) associated to the best position.
-            computation_time: time it took to compute this iteration.
         """
-        position_index = index + 1 * self._initialized
-
         if np.any(rescued):
-            rescued_mask = np.where(rescued)[0]
+            self.position_trace[iteration + 1, rescued] = position[rescued]
+            self.cost_trace[iteration + 1, rescued] = costs[rescued]
 
-            self._position_trace[position_index, rescued_mask] = position.copy()[rescued_mask]
-            self._cost_trace[position_index, rescued_mask] = np.array(costs)[rescued_mask]
+            self.rescued[iteration + 1] = np.array(rescued)
 
-            self._rescued[index] = np.array(rescued)
+            self.cost_trace_n[iteration + 1] = last_ns
 
-            rescued_n = self._cost_trace_n[position_index]
-            rescued_n[rescued_mask] = self._cost_trace_n[best_index[0], best_index[1]]
-            self._cost_trace_n[position_index] = rescued_n
-
-        self._best_position_trace[position_index, :self.nb_dimensions] = best_position
-        self._best_position_trace[position_index, self.nb_dimensions] = best_cost
-        self._best_position_trace[position_index, self.nb_dimensions + 1] = best_index[1]
-        self._best_position_trace[position_index, self.nb_dimensions + 2] = self._n_trace[best_index[0] - 1]
-
-        self._computation_time[index] = computation_time
-
-    def finalize(self) -> None:
-        """
-        Cleanup traces at the end of the SA algorithm.
-        """
-        super().finalize()
-
-        self._best_position_trace = self._best_position_trace[:self.position_counter]
-        self._rescued = self._rescued[:self._iteration_counter]
-
-    def reached_convergence(self,
-                            tolerance: float) -> bool:
-        """
-        Has the cost trace reached convergence within a tolerance margin ?
-
-        Args:
-            tolerance: the allowed root-mean-square deviation.
-
-        Returns:
-            Whether the cost trace has converged.
-        """
-        if self._iteration_counter < self._window_size or not self._detect_convergence:
-            return False
-
-        # in case of rescue, if all workers end up on the same position, consider it as convergence
-        if np.any(self._rescued[self._iteration_counter - 1]):
-            if np.all(np.all(self._position_trace[self.position_counter - 1] ==
-                             self._position_trace[self.position_counter - 1][0], axis=1)):
-                return True
-
-        position_slice = slice(self.position_counter - self._window_size, self.position_counter)
-
-        mean_window = np.mean(self._best_position_trace[position_slice, -3])
-        RMSD = np.sqrt(np.sum(
-            (self._best_position_trace[position_slice, -3] - mean_window) ** 2
-        ) / (self._window_size - 1))
-
-        return RMSD < tolerance
-
-    def mean_acceptance_fraction(self) -> float:
-        """
-        Get the mean proportion of accepted proposition in the last <window_size> propositions over all walkers.
-
-        :return: The mean proportion of accepted proposition in the last <window_size> propositions over all walkers.
-        """
-        if self._iteration_counter < self._window_size:
-            return np.nan
-
-        return float(np.mean(
-            [np.sum(self._accepted[self._iteration_counter - self._window_size:self._iteration_counter, w]) /
-             self._window_size for w in range(self.nb_walkers)]))
-
-    def are_stuck(self) -> list[bool]:
-        """
-        Detect which walkers are stuck at the same position within the last <window_size> positions.
-
-        :return: The list of stuck walkers.
-        """
-        if self._iteration_counter < self._window_size:
-            return [False for _ in range(self.nb_walkers)]
-
-        return [np.sum(self._accepted[self._iteration_counter - self._window_size:self._iteration_counter, w]) == 0
-                for w in range(self.nb_walkers)]
-
-    def get_best(self) -> tuple[np.ndarray, float, list[int]]:
+    def _set_best(self,
+                  iteration: int,
+                  current_n: int) -> None:
         """
         Get the best vector with associated cost and iteration at which it was reached.
+
+        Args:
+            iteration: iteration index at which to get the best vector.
+            current_n: the current number of averaged function evaluations.
 
         Returns:
             The best vector, the best cost and iteration number that reached it.
         """
-        START = 0 + 1 * self._initialized if self.position_counter > 1 else 0
+        _START = max(0, iteration - self.parameters.window_size + 2)
+        _STOP = iteration + 2
 
-        lookup_array = self._cost_trace[
-                       max(START, self.position_counter - self._window_size):self.position_counter].copy()
+        lookup_array = self.cost_trace[_START:_STOP].copy()
+
+        start_lookup_index = np.repeat(_START, self.nb_walkers)
+
+        # # correct lookup array for walkers that already converged
+        # last_valid_indices = np.argmax(np.isnan(self.cost_trace), axis=0) - 1
+        #
+        # for walker_index in range(self.nb_walkers):
+        #     if last_valid_indices[walker_index] != -1:
+        #         lookup_array[:, walker_index] = self.cost_trace[last_valid_indices[walker_index], walker_index]
+        #         start_lookup_index[walker_index] = last_valid_indices[walker_index]
 
         # normalize lookup array to account for variance drop
-        current_n = self._n_trace[self._iteration_counter - 1]
-        with np.errstate(divide='ignore'):
-            correction_factors = current_n / self._cost_trace_n[max(START, self.position_counter -
-                                                                    self._window_size):self.position_counter]
+        lookup_array *= current_n / self.cost_trace_n[_START:_STOP]
 
-        lookup_array *= correction_factors
+        # ---------------------------------------------------------------------
+        # where walkers have converged, copy previous best position
+        self.best_position_trace[iteration + 1, self.converged, :self.nb_dimensions] = \
+            self.best_position_trace[iteration, self.converged, :self.nb_dimensions]
+        self.best_position_trace[iteration + 1, self.converged, self.nb_dimensions] = \
+            self.best_position_trace[iteration, self.converged, self.nb_dimensions]
+        self.best_position_trace[iteration + 1, self.converged, self.nb_dimensions + 1] = \
+            self.best_position_trace[iteration, self.converged, self.nb_dimensions + 1]
 
-        _best_index = list(np.unravel_index(np.argmin(lookup_array), lookup_array.shape))
+        # ---------------------------------------------------------------------
+        # where walkers have not converged, find best position
+        best_iteration = np.nanargmin(lookup_array[:, ~self.converged], axis=0) + start_lookup_index[~self.converged]
 
-        _best_index[0] += max(START, self.position_counter - self._window_size)
-        corrected_index = _best_index[0]
+        # find first occurence of that best iteration (/!\ might be before _START)
+        best_iteration = \
+            np.argmax(self.cost_trace[:_STOP, ~self.converged] == self.cost_trace[best_iteration, ~self.converged],
+                      axis=0)
 
-        while self._cost_trace[corrected_index, _best_index[1]] == self._cost_trace[_best_index[0], _best_index[1]]:
-            corrected_index -= 1
-            if corrected_index < 0:
-                break
+        self.best_position_trace[iteration + 1, ~self.converged, :self.nb_dimensions] = \
+            self.position_trace[best_iteration, ~self.converged]
+        self.best_position_trace[iteration + 1, ~self.converged, self.nb_dimensions] = \
+            self.cost_trace[best_iteration, ~self.converged]
+        self.best_position_trace[iteration + 1, ~self.converged, self.nb_dimensions + 1] = \
+            self.cost_trace_n[best_iteration, ~self.converged]
 
-        _best_index[0] = corrected_index + 1 * self._initialized
-
-        return self._position_trace[_best_index[0], _best_index[1]], \
-               self._cost_trace[_best_index[0], _best_index[1]], \
-               _best_index
-
-    def get_acceptance_trace(self) -> tuple[np.ndarray, np.ndarray]:
+    def _update_convergence(self,
+                            iteration: int) -> None:
         """
-        Get traces related to acceptance rates along iterations.
+        For each parallel problem, has the cost trace reached convergence within a tolerance margin ?
 
-        :return: Traces related to acceptance rates along iterations.
+        Args:
+            iteration: current iteration number.
         """
-        return self._accepted, self._rescued
+        if not self.parameters.base.detect_convergence or iteration < self.parameters.window_size:
+            return
 
+        position_slice = slice(iteration - self.parameters.window_size, iteration)
+
+        mean_window = np.mean(self.cost_trace[position_slice], axis=0)
+        RMSD = np.sqrt(
+            np.sum((self.cost_trace[position_slice] - mean_window) ** 2, axis=0) /
+            (self.parameters.window_size - 1)
+        )
+
+        self.converged_at_iteration[(RMSD < self.parameters.base.tol) & (self.converged_at_iteration == -1)] = \
+            iteration
+
+    def get_best(self,
+                 iteration: int | None = None) -> Position:
+        if iteration is None:
+            iteration = self.nb_iterations - 1
+
+        return Position(
+            self.best_position_trace[iteration + 1, :, :self.nb_dimensions].copy(),
+            self.best_position_trace[iteration + 1, :, self.nb_dimensions].copy(),
+            self.best_position_trace[iteration + 1, :, self.nb_dimensions + 1].copy()
+        )
+
+    def get_best_all(self,
+                     iteration: int | None = None) -> Position:
+        best = self.get_best(iteration)
+        best_index = np.argmin(best.cost)
+
+        return Position(
+            best.x[best_index],
+            best.cost[best_index],
+            best.n[best_index]
+        )
+
+    def mean_acceptance_fraction(self,
+                                 iteration: int) -> float:
+        """
+        Get the mean proportion of accepted proposition in the last <window_size> propositions over all walkers.
+
+        Args:
+            iteration: current iteration number.
+
+        Returns:
+            The mean proportion of accepted proposition in the last <window_size> propositions over all walkers.
+        """
+        if iteration < self.parameters.window_size:
+            return np.nan
+
+        _START = iteration - self.parameters.window_size + 1
+        _STOP = iteration + 1
+
+        return float(np.mean([np.sum(self._accepted[_START:_STOP, w]) / self.parameters.window_size
+                              for w in range(self.nb_walkers)]))
+
+    def are_stuck(self,
+                  iteration: int) -> np.ndarray:
+        """
+        Detect which walkers are stuck at the same position within the last <window_size> positions.
+
+        Args:
+            iteration: current iteration number.
+
+        Returns:
+            The list of stuck walkers.
+        """
+        if iteration < self.parameters.window_size:
+            return np.zeros(self.nb_walkers, dtype=bool)
+
+        _START = iteration - self.parameters.window_size + 1
+        _STOP = iteration + 1
+
+        return np.array([np.sum(self._accepted[_START:_STOP, w]) == 0
+                         for w in range(self.nb_walkers)])
+
+    # endregion
+
+
+class ParameterTrace:
+
+    # region magic methods
+    def __init__(self,
+                 nb_iterations: int):
+        """
+        Args:
+            nb_iterations: number of expected iterations for the SA algorithm.
+        """
+        self.temperature_trace = np.zeros(nb_iterations, dtype=np.float32)
+        self.n_trace = np.zeros(nb_iterations, dtype=np.int32)
+        self.sigma_trace = np.zeros(nb_iterations, dtype=np.float32)
+        self.computation_time = np.zeros(nb_iterations, dtype=np.float32)
+
+    # endregion
+
+    # region attributes
+    @property
+    def nb_iterations(self) -> int:
+        return self.temperature_trace.shape[0]
+
+    # endregion
+
+    # region methods
+    def finalize(self,
+                 iteration: int) -> None:
+        """
+        Cleanup trace at the end of the SA algorithm.
+        """
+        self.temperature_trace = self.temperature_trace[:iteration + 1]
+        self.n_trace = self.n_trace[:iteration + 1]
+        self.sigma_trace = self.sigma_trace[:iteration + 1]
+        self.computation_time = self.computation_time[:iteration + 1]
+
+    def store(self,
+              iteration: int,
+              temperature: float,
+              n: int,
+              sigma: float,
+              computation_time: float) -> None:
+        """
+        Save the current position of the vector to optimize, the current cost, temperature and number of averaged
+            function evaluations.
+
+        Args:
+            iteration: iteration index for storing the data.
+            temperature: the current temperature.
+            n: the current number of averaged function evaluations.
+            sigma: the current estimated standard deviation.
+            computation_time: the time required for computing this iteration.
+
+        Returns:
+            The index at which was stored the data.
+        """
+        self.temperature_trace[iteration] = float(temperature)
+        self.n_trace[iteration] = int(n)
+        self.sigma_trace[iteration] = float(sigma)
+        self.computation_time[iteration] = float(computation_time)
+
+    # endregion
+
+
+class Trace(ABC):
+    """
+    Object for storing the trace history of an SA run.
+    """
+
+    # region magic methods
+    def __init__(self,
+                 nb_iterations: int,
+                 nb_walkers: int,
+                 nb_dimensions: int,
+                 run_parameters: SAParameters | SequentialSAParameters,
+                 initial_position: np.ndarray,
+                 initial_cost: np.ndarray):
+        """
+        Args:
+            nb_iterations: number of expected iterations for the SA algorithm.
+            nb_walkers: number of walkers in parallel.
+            nb_dimensions: number of dimensions per problem.
+            run_parameters: parameters used for running the SA algorithm.
+            initial_position: initial positions before running the SA algorithm.
+            initial_cost: cost of initial positions.
+        """
+        # trace values that will change during SA execution
+        self.positions = PositionTrace(run_parameters, nb_iterations, nb_walkers, nb_dimensions, initial_position,
+                                       initial_cost)
+        self.parameters = ParameterTrace(nb_iterations)
+
+    @abstractmethod
+    def __repr__(self) -> str:
+        pass
+
+    # endregion
+
+    # region attributes
+    @property
+    def nb_walkers(self) -> int:
+        return self.positions.nb_walkers
+
+    @property
+    def nb_dimensions(self) -> int:
+        return self.positions.nb_dimensions
+
+    @property
+    def nb_iterations(self) -> int:
+        return self.positions.nb_iterations
+
+    # endregion
+
+    # region methods
+    def finalize(self,
+                 iteration: int) -> None:
+        self.positions.finalize(iteration)
+        self.parameters.finalize(iteration)
+
+    @abstractmethod
     def plot_positions(self,
                        save: Path | None = None,
-                       true_values: Sequence[float] | None = None,
-                       extended: bool = False,
+                       true_values: np.ndarray | None = None,
                        show: bool = True,
-                       subplot_titles: Sequence[str] | None = None) -> None:
+                       walker_titles: Sequence[str] | None = None,
+                       dimension_titles: Sequence[str] | None = None) -> None:
         """
         Plot reached positions and costs for the vector to optimize along iterations.
 
         Args:
             save: optional path to save the plot as a html file.
             true_values: an optional sequence of known true values for each dimension of the vector to optimize.
-            extended: plot additional plots ? (mostly for debugging)
             show: render the plot ? (default True)
-            subplot_titles: an optional list of sub-plot titles, one title per dimension. (default None)
+            walker_titles: an optional list of sub-plot titles, one title per parallel walker. (default None)
+            dimension_titles: an optional list of sub-plot titles, one title per dimension. (defualt None)
         """
-        if true_values is not None and len(true_values) != self.nb_dimensions:
-            raise ShapeError(f'The vector of true values should have {self.nb_dimensions} dimensions, '
-                             f'not {len(true_values)}.')
-
-        if subplot_titles is not None:
-            if len(subplot_titles) != self.nb_dimensions:
-                raise ShapeError(f'Expected {self.nb_dimensions} sub-plot titles, got {len(subplot_titles)}.')
-
-        supp_plots = 3 if extended else 1
-
-        titles = ["Costs"]
-
-        if subplot_titles is not None:
-            titles += [f'{subplot_titles[i]}' for i in range(self.nb_dimensions)]
-
-        else:
-            titles += [f'Dimension {i}' for i in range(self.nb_dimensions)]
-
-        if extended:
-            titles.insert(1, "n at cost evaluation")
-            titles.insert(2, "Best cost evolution")
-
-        fig = make_subplots(rows=self.nb_dimensions + supp_plots, cols=1, shared_xaxes=True,
-                            subplot_titles=titles,
-                            vertical_spacing=0)  # min(0.05, 1 / (self.ndim + supp_plots - 1))
-
-        for w in range(self.nb_walkers):
-            fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
-                                     y=self._cost_trace[:, w],
-                                     name=f'Walker #{w}',
-                                     marker=dict(color='rgba(0, 0, 200, 0.3)'),
-                                     hovertext=[f"<b>Walker</b>: {w}<br>"
-                                                f"<b>Cost</b>: {cost:.4f}<br>"
-                                                f"<b>Iteration</b>: {iteration}"
-                                                for iteration, cost in enumerate(self._cost_trace[:, w])],
-                                     hoverinfo="text",
-                                     showlegend=True,
-                                     legendgroup=f'Walker #{w}'), row=1, col=1)
-
-            if extended:
-                fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
-                                         y=self._cost_trace_n[:, w],
-                                         name=f'Walker #{w}',
-                                         marker=dict(color='rgba(0, 0, 200, 0.3)'),
-                                         hovertext=[f"<b>Walker</b>: {w}<br>"
-                                                    f"<b>n at cost evaluation</b>: {cost_n}<br>"
-                                                    f"<b>Iteration</b>: {iteration}"
-                                                    for iteration, cost_n in enumerate(self._cost_trace_n[:, w])],
-                                         hoverinfo="text",
-                                         showlegend=False,
-                                         legendgroup=f'Walker #{w}'), row=2, col=1)
-
-        if extended:
-            with np.errstate(divide='ignore', invalid='ignore'):
-                best_costs = [self._best_position_trace[it, -3] * np.insert(self._n_trace, 0, 0)[it] /
-                              self._best_position_trace[it, -1]
-                              for it in range(self.nb_positions)]
-            best_walkers = [int(self._best_position_trace[it, -2]) for it in range(self.nb_positions)]
-
-            fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
-                                     y=best_costs,
-                                     name='Best cost evolution',
-                                     marker=dict(color='rgba(252, 196, 25, 1.)'),
-                                     hovertext=[f"<b>Walker</b>: {best_walkers[iteration]}<br>"
-                                                f"<b>Cost</b>: {cost}<br>"
-                                                f"<b>Iteration</b>: {iteration}"
-                                                for iteration, cost in enumerate(best_costs)],
-                                     hoverinfo="text",
-                                     showlegend=False), row=3, col=1)
-
-        for d in range(self.nb_dimensions):
-            for w in range(self.nb_walkers):
-                fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
-                                         y=self._position_trace[:, w, d],
-                                         marker=dict(color='rgba(0, 0, 0, 0.3)'),
-                                         name=f'Walker #{w}',
-                                         hovertext=[f"<b>Walker</b>: {w}<br>"
-                                                    f"<b>Position</b>: {self._position_trace[iteration, w, d]:.4f}<br>"
-                                                    f"<b>Cost</b>: {cost:.4f}<br>"
-                                                    f"<b>Iteration</b>: {iteration}"
-                                                    for iteration, cost in enumerate(self._cost_trace[:, w])],
-                                         hoverinfo="text",
-                                         showlegend=False,
-                                         legendgroup=f'Walker #{w}'), row=d + supp_plots + 1, col=1)
-
-                # add rescue points
-                rescue_iterations = np.where(self._rescued[:, w])[0]
-                fig.add_trace(go.Scatter(x=rescue_iterations,
-                                         y=self._position_trace[rescue_iterations, w, d],
-                                         mode='markers',
-                                         marker=dict(color='rgba(0, 255, 0, 0.3)',
-                                                     symbol=2,
-                                                     size=10),
-                                         name=f'Rescues for walker #{w}',
-                                         hovertext=[f"<b>Walker</b>: {w}<br>"
-                                                    f"<b>Position</b>: {self._position_trace[iteration, w, d]:.4f}<br>"
-                                                    f"<b>Cost</b>: {self._cost_trace[iteration, w]:.4f}<br>"
-                                                    f"<b>Iteration</b>: {iteration}"
-                                                    for iteration in rescue_iterations],
-                                         hoverinfo="text",
-                                         showlegend=False,
-                                         legendgroup=f'Walker #{w}'), row=d + supp_plots + 1, col=1)
-
-            # add best points
-            fig.add_trace(go.Scatter(x=list(range(self.nb_positions)),
-                                     y=self._best_position_trace[:, d],
-                                     mode='markers',
-                                     marker=dict(color='rgba(252, 196, 25, 1.)',
-                                                 symbol=0,
-                                                 size=3),
-                                     name='Best cost',
-                                     hovertext=[f"<b>Walker</b>: {int(self._best_position_trace[iteration, -2])}<br>"
-                                                f"<b>Position</b>: {position:.4f}<br>"
-                                                f"<b>Cost</b>: {self._best_position_trace[iteration, -3]:.4f}<br>"
-                                                f"<b>Iteration</b>: {iteration}"
-                                                for iteration, position in enumerate(self._best_position_trace[:, d])],
-                                     hoverinfo="text",
-                                     showlegend=d == 0,
-                                     legendgroup='Best cost'), row=d + supp_plots + 1, col=1)
-
-            if true_values is not None:
-                fig.add_trace(go.Scatter(x=[0, self.nb_positions - 1],
-                                         y=[true_values[d], true_values[d]],
-                                         mode='lines',
-                                         marker=dict(color='rgba(200, 0, 0, 1)'),
-                                         line=dict(dash='dash'),
-                                         name='True value',
-                                         showlegend=False), row=d + supp_plots + 1, col=1)
-
-                fig.add_annotation(
-                    x=self.nb_positions - 1,
-                    y=np.max(self._position_trace[:, :, d]),
-                    xref=f"x{d + supp_plots + 1}",
-                    yref=f"y{d + supp_plots + 1}",
-                    text=f"True value : {true_values[d]}",
-                    showarrow=False,
-                    borderwidth=0,
-                    borderpad=4,
-                    bgcolor="#eb9a9a",
-                    opacity=0.8
-                )
-
-        for i in range(self.nb_dimensions + 1):
-            fig.layout.annotations[i].update(x=0.025, xanchor='left')
-
-        fig['layout'].update(height=200 * (self.nb_dimensions + 2), width=600, margin=dict(t=40, b=10, l=10, r=10),
-                             xaxis_range=[0, self.nb_positions - 1])
-
-        if show:
-            fig.show()
-
-        if save is not None:
-            fig.write_html(str(save))
-
-    def plot_exploration(self,
-                         save: Path | str | None = None,
-                         show: bool = True) -> None:
-        """
-        Plot the full set of explored positions per dimension as a density plot.
-
-        Args:
-            save: optional path to save the plot as a html file.
-            show: render the plot ? (default True)
-        """
-        titles = [f'Dimension {i}' for i in range(self.nb_dimensions)]
-
-        fig = make_subplots(rows=self.nb_dimensions, cols=1,
-                            subplot_titles=titles,
-                            vertical_spacing=0)
-
-        for d in range(self.nb_dimensions):
-            data = [position for position, n in self._explored[d].items() for _ in range(n)]
-
-            counts, bins = np.histogram(data, range=self._bounds[d])
-            bins = 0.5 * (bins[:-1] + bins[1:])
-
-            fig.add_trace(go.Heatmap(x=bins,
-                                     z=counts[np.newaxis],
-                                     coloraxis=f'coloraxis'), row=d + 1, col=1)
-
-            fig.update_layout({f'xaxis{d + 1}': dict(range=self._bounds[d])})
-
-        fig.update_layout({f'coloraxis': dict(colorscale='tempo', colorbar_thickness=23)})
-
-        if show:
-            fig.show()
-
-        if save is not None:
-            fig.write_html(str(save))
+        pass
 
     def plot_parameters(self,
-                        save: Path | None = None,
-                        extended: bool = False,
+                        save: Path | str | None = None,
                         show: bool = True) -> None:
         """
         Plot temperature, number of repeats per iteration and number of averaged function evaluations along iterations.
 
         Args:
             save: optional path to save the plot as a html file.
-            extended: plot additional plots ? (mostly for debugging)
             show: render the plot ? (default True)
         """
-        sub_plots = 5 if extended else 4
-        titles = ["Temperature", "sigma", "n", "Acceptance fraction (%)"]
-        if extended:
-            titles.append("Computation time (s)")
+        titles = ["Temperature", "sigma", "n", "Computation time (s)"]
 
-        fig = make_subplots(rows=sub_plots, cols=1, shared_xaxes=True,
+        fig = make_subplots(rows=4, cols=1,
+                            shared_xaxes=True,
                             subplot_titles=titles,
-                            vertical_spacing=min(0.05, 1 / (sub_plots - 1)))
+                            vertical_spacing=min(0.05, 1 / (4 - 1)))
 
         if self.nb_iterations:
-            fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-                                     y=self._temperature_trace,
+            fig.add_trace(go.Scatter(x=list(range(1, self.nb_iterations + 1)),
+                                     y=self.parameters.temperature_trace,
                                      name='T',
                                      hovertext=[f"<b>Temperature</b>: {_T:.4f}<br>"
                                                 f"<b>Iteration</b>: {iteration + 1}"
-                                                for iteration, _T in enumerate(self._temperature_trace)],
+                                                for iteration, _T in enumerate(self.parameters.temperature_trace)],
                                      hoverinfo="text",
                                      showlegend=False), row=1, col=1)
 
-            fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-                                     y=self._sigma_trace,
+            fig.add_trace(go.Scatter(x=list(range(1, self.nb_iterations + 1)),
+                                     y=self.parameters.sigma_trace,
                                      name='sigma',
                                      hovertext=[f"<b>Sigma</b>: {_sigma:.4f}<br>"
                                                 f"<b>Iteration</b>: {iteration + 1}"
-                                                for iteration, _sigma in enumerate(self._sigma_trace)],
+                                                for iteration, _sigma in enumerate(self.parameters.sigma_trace)],
                                      hoverinfo="text",
                                      showlegend=False), row=2, col=1)
 
-            fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-                                     y=self._n_trace,
+            fig.add_trace(go.Scatter(x=list(range(1, self.nb_iterations + 1)),
+                                     y=self.parameters.n_trace,
                                      name='n',
                                      hovertext=[f"<b>Number evaluations</b>: {_n}<br>"
                                                 f"<b>Iteration</b>: {iteration + 1}"
-                                                for iteration, _n in enumerate(self._n_trace)],
+                                                for iteration, _n in enumerate(self.parameters.n_trace)],
                                      hoverinfo="text",
                                      showlegend=False), row=3, col=1)
 
-            accepted_proportions = np.zeros((self.nb_walkers, self.position_counter))
-
-            for w in range(self.nb_walkers):
-                accepted_proportions[w] = np.concatenate((np.array([np.nan for _ in range(self._window_size)]),
-                                                          np.convolve(self._accepted[:, w],
-                                                                      np.ones(self._window_size) / self._window_size,
-                                                                      mode='valid') * 100))
-
-                fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-                                         y=accepted_proportions[w],
-                                         name=f'Walker #{w}',
-                                         marker=dict(color='rgba(0, 0, 200, 0.3)'),
-                                         hovertext=[f"<b>Walker</b>: {w}<br>"
-                                                    f"<b>Acceptance percentage</b>: {accepted:.2f}%<br>"
-                                                    f"<b>Iteration</b>: {iteration}"
-                                                    for iteration, accepted in enumerate(accepted_proportions[w])],
-                                         hoverinfo="text",
-                                         showlegend=True), row=4, col=1)
-
-            mean_acceptance_proportions = np.mean(accepted_proportions, axis=0)
-            fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-                                     y=mean_acceptance_proportions,
-                                     name='Mean acceptance',
-                                     marker=dict(color='rgba(33, 33, 99, 1.)'),
-                                     hovertext=[f"<b>Mean acceptance percentage</b>: {accepted:.2f}%<br>"
-                                                f"<b>Iteration</b>: {iteration}"
-                                                for iteration, accepted in enumerate(mean_acceptance_proportions)],
+            fig.add_trace(go.Scatter(x=list(range(1, self.nb_iterations + 1)),
+                                     y=self.parameters.computation_time,
+                                     name='T',
+                                     hovertext=[f"<b>Time</b>: {_time:.4f}<br>"
+                                                f"<b>Iteration</b>: {iteration + 1}"
+                                                for iteration, _time in enumerate(self.parameters.computation_time)],
                                      hoverinfo="text",
-                                     showlegend=True), row=4, col=1)
+                                     showlegend=False), row=4, col=1)
 
-            if extended:
-                fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-                                         y=self._computation_time,
-                                         name='T',
-                                         hovertext=[f"<b>Time</b>: {_time:.4f}<br>"
-                                                    f"<b>Iteration</b>: {iteration + 1}"
-                                                    for iteration, _time in enumerate(self._computation_time)],
-                                         hoverinfo="text",
-                                         showlegend=False), row=5, col=1)
-
-        fig.update_layout(yaxis4=dict(range=[0, 100]), height=150 * (self.nb_dimensions + 1), width=600,
+        fig.update_layout(height=150 * (self.nb_dimensions + 1),
+                          width=600,
                           margin=dict(t=40, b=10, l=10, r=10))
 
         for i in range(4):
@@ -734,3 +506,225 @@ class OneTrace(Trace):
 
         if save is not None:
             fig.write_html(str(save))
+
+    # endregion
+
+
+class OneTrace(Trace):
+    """
+    Object for storing the trace history of an SA run.
+    """
+
+    # region magic methods
+    def __repr__(self) -> str:
+        return f"Trace of {self.nb_iterations} iteration(s), {self.nb_walkers} walker(s) and " \
+               f"{self.nb_dimensions} dimension(s)."
+
+    # endregion
+
+    # region methods
+    def plot_positions(self,
+                       save: Path | None = None,
+                       true_values: np.ndarray | None = None,
+                       show: bool = True,
+                       walker_titles: Sequence[str] | None = None,
+                       dimension_titles: Sequence[str] | None = None) -> None:
+        """
+        Plot reached positions and costs for the vector to optimize along iterations.
+
+        Args:
+            save: optional path to save the plot as a html file.
+            true_values: an optional sequence of known true values for each dimension of the vector to optimize.
+            show: render the plot ? (default True)
+            walker_titles: an optional list of sub-plot titles, one title per parallel walker. (default None)
+            dimension_titles: an optional list of sub-plot titles, one title per dimension. (default None)
+        """
+        if true_values is not None and len(true_values) != self.nb_dimensions:
+            raise ShapeError(f'The vector of true values should have {self.nb_dimensions} dimensions, '
+                             f'not {len(true_values)}.')
+
+        # if subplot_titles is not None:
+        #     if len(subplot_titles) != self.nb_dimensions:
+        #         raise ShapeError(f'Expected {self.nb_dimensions} sub-plot titles, got {len(subplot_titles)}.')
+
+        titles = ["Costs", "n", "Best cost evolution"]
+
+        if walker_titles is not None:
+            # titles += [f'{subplot_titles[i]}' for i in range(self.nb_dimensions)]
+            pass
+
+        else:
+            titles += [f'Dimension {i}' for i in range(self.nb_dimensions)]
+
+        fig = make_subplots(rows=self.nb_dimensions + 3, cols=1,
+                            shared_xaxes=True,
+                            subplot_titles=titles,
+                            vertical_spacing=0)  # min(0.05, 1 / (self.ndim + supp_plots - 1))
+
+        for w in range(self.nb_walkers):
+            fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+                                     y=self.positions.cost_trace[:, w],
+                                     name=f'Walker #{w}',
+                                     marker=dict(color='rgba(0, 0, 200, 0.3)'),
+                                     hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                f"<b>Cost</b>: {cost:.4f}<br>"
+                                                f"<b>Iteration</b>: {iteration}"
+                                                for iteration, cost in enumerate(self.positions.cost_trace[:, w])],
+                                     hoverinfo="text",
+                                     showlegend=True,
+                                     legendgroup=f'Walker #{w}'), row=1, col=1)
+
+            fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+                                     y=self.positions.cost_trace_n[:, w],
+                                     name=f'Walker #{w}',
+                                     marker=dict(color='rgba(0, 0, 200, 0.3)'),
+                                     hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                f"<b>n at cost evaluation</b>: {cost_n}<br>"
+                                                f"<b>Iteration</b>: {iteration}"
+                                                for iteration, cost_n in enumerate(self.positions.cost_trace_n[:, w])],
+                                     hoverinfo="text",
+                                     showlegend=False,
+                                     legendgroup=f'Walker #{w}'), row=2, col=1)
+
+            # Best cost
+            best_costs = np.zeros(self.nb_iterations + 1)
+
+            with np.errstate(divide='ignore', invalid='ignore'):
+                for it in range(self.nb_iterations + 1):
+                    best = self.positions.get_best(it - 1)
+                    best_costs[it] = best.cost[w] * np.insert(self.parameters.n_trace, 0, 1)[it] / best.n[w]
+
+            fig.add_trace(go.Scatter(x=list(range(self.nb_iterations + 1)),
+                                     y=best_costs,
+                                     name='Best cost evolution',
+                                     marker=dict(color='rgba(252, 196, 25, 1.)'),
+                                     hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                f"<b>Cost</b>: {cost}<br>"
+                                                f"<b>Iteration</b>: {iteration}"
+                                                for iteration, cost in enumerate(best_costs)],
+                                     hoverinfo="text",
+                                     showlegend=False),
+                          row=3, col=1)
+
+            for d in range(self.nb_dimensions):
+                fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+                                         y=self.positions.position_trace[:, w, d],
+                                         marker=dict(color='rgba(0, 0, 0, 0.3)'),
+                                         name=f'Walker #{w}',
+                                         hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                    f"<b>Position</b>: "
+                                                    f"{self.positions.position_trace[iteration, w, d]:.4f}<br>"
+                                                    f"<b>Cost</b>: {cost:.4f}<br>"
+                                                    f"<b>Iteration</b>: {iteration}"
+                                                    for iteration, cost in enumerate(self.positions.cost_trace[:, w])],
+                                         hoverinfo="text",
+                                         showlegend=False,
+                                         legendgroup=f'Walker #{w}'), row=d + 4, col=1)
+
+                # add rescue points
+                rescue_iterations = np.where(self.positions.rescued[:, w])[0]
+                fig.add_trace(go.Scatter(x=rescue_iterations,
+                                         y=self.positions.position_trace[rescue_iterations, w, d],
+                                         mode='markers',
+                                         marker=dict(color='rgba(0, 255, 0, 0.3)',
+                                                     symbol=2,
+                                                     size=10),
+                                         name=f'Rescues for walker #{w}',
+                                         hovertext=[f"<b>Walker</b>: {w}<br>"
+                                                    f"<b>Position</b>: "
+                                                    f"{self.positions.position_trace[iteration, w, d]:.4f}<br>"
+                                                    f"<b>Cost</b>: {self.positions.cost_trace[iteration, w]:.4f}<br>"
+                                                    f"<b>Iteration</b>: {iteration}"
+                                                    for iteration in rescue_iterations],
+                                         hoverinfo="text",
+                                         showlegend=False,
+                                         legendgroup=f'Walker #{w}'), row=d + 4, col=1)
+
+        # for d in range(self.nb_dimensions):
+        #     # add best points
+        #     fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+        #                              y=self.positions.best_position_trace[:, d],
+        #                              mode='markers',
+        #                              marker=dict(color='rgba(252, 196, 25, 1.)',
+        #                                          symbol=0,
+        #                                          size=3),
+        #                              name='Best cost',
+        #                              hovertext=[
+        #                                  f"<b>Walker</b>: "
+        #                                  f"{int(self.positions.best_position_trace[iteration, -2])}<br>"
+        #                                  f"<b>Position</b>: {position:.4f}<br>"
+        #                                  f"<b>Cost</b>: "
+        #                                  f"{self.positions.best_position_trace[iteration, -3]:.4f}<br>"
+        #                                  f"<b>Iteration</b>: {iteration}"
+        #                                 for iteration, position in enumerate(self.positions.best_position_trace[:, d])
+        #                              ],
+        #                              hoverinfo="text",
+        #                              showlegend=d == 0,
+        #                              legendgroup='Best cost'), row=d + 4, col=1)
+        #
+        #     if true_values is not None:
+        #         fig.add_trace(go.Scatter(x=[0, self.nb_iterations - 1],
+        #                                  y=[true_values[d], true_values[d]],
+        #                                  mode='lines',
+        #                                  marker=dict(color='rgba(200, 0, 0, 1)'),
+        #                                  line=dict(dash='dash'),
+        #                                  name='True value',
+        #                                  showlegend=False), row=d + 4, col=1)
+        #
+        #         fig.add_annotation(
+        #             x=self.nb_iterations - 1,
+        #             y=np.max(self.positions.position_trace[:, :, d]),
+        #             xref=f"x{d + 4}",
+        #             yref=f"y{d + 4}",
+        #             text=f"True value : {true_values[d]}",
+        #             showarrow=False,
+        #             borderwidth=0,
+        #             borderpad=4,
+        #             bgcolor="#eb9a9a",
+        #             opacity=0.8
+        #         )
+        #
+        # for i in range(self.nb_dimensions + 1):
+        #     fig.layout.annotations[i].update(x=0.025, xanchor='left')
+
+        fig['layout'].update(height=200 * (self.nb_dimensions + 2), width=600, margin=dict(t=40, b=10, l=10, r=10),
+                             xaxis_range=[0, self.nb_iterations - 1])
+
+        if show:
+            fig.show()
+
+        if save is not None:
+            fig.write_html(str(save))
+
+    # def plot_acceptance(self):
+    #     accepted_proportions = np.zeros((self.nb_walkers, self.position_counter))
+    #
+    #     for w in range(self.nb_walkers):
+    #         accepted_proportions[w] = np.concatenate((np.array([np.nan for _ in range(self._window_size)]),
+    #                                                   np.convolve(self._accepted[:, w],
+    #                                                               np.ones(self._window_size) / self._window_size,
+    #                                                               mode='valid') * 100))
+    #
+    #         fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
+    #                                  y=accepted_proportions[w],
+    #                                  name=f'Walker #{w}',
+    #                                  marker=dict(color='rgba(0, 0, 200, 0.3)'),
+    #                                  hovertext=[f"<b>Walker</b>: {w}<br>"
+    #                                             f"<b>Acceptance percentage</b>: {accepted:.2f}%<br>"
+    #                                             f"<b>Iteration</b>: {iteration}"
+    #                                             for iteration, accepted in enumerate(accepted_proportions[w])],
+    #                                  hoverinfo="text",
+    #                                  showlegend=True), row=4, col=1)
+    #
+    #     mean_acceptance_proportions = np.mean(accepted_proportions, axis=0)
+    #     fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
+    #                              y=mean_acceptance_proportions,
+    #                              name='Mean acceptance',
+    #                              marker=dict(color='rgba(33, 33, 99, 1.)'),
+    #                              hovertext=[f"<b>Mean acceptance percentage</b>: {accepted:.2f}%<br>"
+    #                                         f"<b>Iteration</b>: {iteration}"
+    #                                         for iteration, accepted in enumerate(mean_acceptance_proportions)],
+    #                              hoverinfo="text",
+    #                              showlegend=True), row=4, col=1)
+
+    # endregion

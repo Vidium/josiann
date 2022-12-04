@@ -4,22 +4,25 @@
 
 # ====================================================
 # imports
-from __future__ import annotations
-
 import numpy as np
 
-from typing import Callable, Iterable, Iterator, Sequence, Any, cast
+from typing import Any
+from typing import cast
+from typing import Iterable
+from typing import Iterator
+from typing import Sequence
 
-from josiann.utils import acceptance_log_probability
-from josiann.__mappers import Executor
-from .utils import get_vectorized_mean_cost
-from .moves import ParallelMove
-from .__backup import Backup
+from josiann.compute import acceptance_log_probability
+from josiann.typing import SA_UPDATE
+from josiann.typing import VECT_FUN_TYPE
+from josiann.parallel.compute import get_vectorized_mean_cost
+from josiann.parallel.moves import ParallelMove
+from josiann.parallel.backup import Backup
 
 
 # ====================================================
 # code
-def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], list[float]],
+def _vectorized_update_walker(fun: VECT_FUN_TYPE,
                               x: np.ndarray,
                               converged: np.ndarray,
                               costs: Sequence[float],
@@ -30,7 +33,7 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], list[float]],
                               list_moves: list[ParallelMove],
                               list_probabilities: list[float],
                               temperature: float,
-                              backup_storage: Backup) -> Iterator[tuple[np.ndarray, float, int, bool, int]]:
+                              backup_storage: Backup) -> Iterator[SA_UPDATE]:
     """
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
     available moves and accepting the proposed new position based on the new cost.
@@ -54,7 +57,7 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], list[float]],
         accepted.
     """
     # generate a new proposal as a neighbor of x and get its cost
-    move = np.random.choice(list_moves, p=list_probabilities)
+    move = np.random.choice(list_moves, p=list_probabilities)                           # type: ignore[arg-type]
     proposed_positions = move.get_proposal(x[~converged], None)
 
     previous_evaluations = backup_storage.get_previous_evaluations(proposed_positions)
@@ -75,7 +78,7 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], list[float]],
 
     for index, has_converged in enumerate(converged):
         if has_converged:
-            yield np.nan, np.nan, np.nan, True, index
+            yield np.nan, np.nan, True, index
 
         else:
             position = proposed_positions[evaluation_index]
@@ -86,40 +89,38 @@ def _vectorized_update_walker(fun: Callable[[np.ndarray, Any], list[float]],
             if acceptance_log_probability(costs[index] * current_n / last_ns[index],
                                           proposed_cost,
                                           temperature) > np.log(np.random.random()):
-                yield position, proposed_cost, current_n, True, index
+                accepted = True
 
             else:
-                yield position, costs[index], last_ns[index], False, index
+                accepted = False
+
+            yield position, proposed_cost, accepted, index
 
 
-class VectorizedExecutor(Executor):
+def vectorized_execution(fun: VECT_FUN_TYPE,
+                         *iterables: Iterable,
+                         **kwargs: Any) -> Iterator[SA_UPDATE]:
     """
-    Vectorized executor for calling <fun> . This requires <fun> to be a vectorized function.
+    Vectorized executor for calling <fn> with all parameters defined in <iterables> at once. This requires <fn> to be
+    a vectorized function.
+
+    Args:
+        fun: a vectorized function to evaluate.
+        *iterables: a sequence of iterables to pass to <fun>.
+        **kwargs: additional parameters.
+
+    Returns:
+        An iterator over map(fn, *iter).
     """
-
-    def map(self,
-            fun: Callable,
-            *iterables: Iterable,
-            **kwargs) -> Iterator:
-        """
-        Returns an iterator on the results of <fun> applied to each position vector in x.
-
-        Args:
-            fun: a vectorized function to evaluate.
-            iterables: a sequence of iterables to pass to <fun>.
-
-        Returns:
-            An iterator over map(fn, *iter).
-        """
-        return _vectorized_update_walker(fun,
-                                         x=cast(np.ndarray, iterables[0]),
-                                         converged=cast(np.ndarray, iterables[1]),
-                                         costs=kwargs['costs'],
-                                         current_n=kwargs['current_n'],
-                                         last_ns=kwargs['last_ns'],
-                                         parallel_args=kwargs['parallel_args'],
-                                         args=kwargs['args'],
-                                         list_moves=kwargs['list_moves'],
-                                         list_probabilities=kwargs['list_probabilities'],
-                                         temperature=kwargs['temperature'],
-                                         backup_storage=kwargs['backup'])
+    return _vectorized_update_walker(fun,
+                                     x=cast(np.ndarray, iterables[0]),
+                                     converged=cast(np.ndarray, iterables[1]),
+                                     costs=kwargs['costs'],
+                                     current_n=kwargs['current_n'],
+                                     last_ns=kwargs['last_ns'],
+                                     parallel_args=kwargs['parallel_args'],
+                                     args=kwargs['args'],
+                                     list_moves=kwargs['list_moves'],
+                                     list_probabilities=kwargs['list_probabilities'],
+                                     temperature=kwargs['temperature'],
+                                     backup_storage=kwargs['backup'])

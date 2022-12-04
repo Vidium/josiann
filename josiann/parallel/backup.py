@@ -6,31 +6,38 @@
 # imports
 import numpy as np
 
+from josiann.backup import Backup
+from josiann.backup import EVALUATION
+
 
 # ====================================================
 # code
-class Backup:
+class ParallelBackup(Backup):
     """
     Object for storing previously computed function evaluations at given position vectors. This is only available
         when using SetStep moves since they offer a decent probability of hitting the exact same position vector
         twice whereas this probability is ~0 for over moves.
     """
-    __slots__ = 'active', '_backup_array'
 
+    # region magic methods
     def __init__(self,
-                 nb_parallel_problems: int,
-                 active: bool = False):
+                 active: bool,
+                 nb_parallel_problems: int):
         """
         Args:
-            nb_parallel_problems: number of parallel problems.
             active: set this backup object to active ? (don't store anything if inactive.)
+            nb_parallel_problems: number of parallel problems.
         """
-        self.active = active
+        super().__init__(active)
+
         self._backup_array: list[dict[tuple, tuple[int, float]]] = [{} for _ in range(nb_parallel_problems)]
 
+    # endregion
+
+    # region methods
     def save(self,
              positions: np.ndarray,
-             evaluation: list[tuple[int, float]]) -> None:
+             evaluation: list[EVALUATION]) -> None:
         """
         Store computed function evaluations at given position vector.
 
@@ -44,7 +51,7 @@ class Backup:
                 self._backup_array[problem_index][position_tuple] = evaluation[problem_index]
 
     def get_previous_evaluations(self,
-                                 positions: np.ndarray) -> list[tuple[int, float]]:
+                                 positions: np.ndarray) -> list[EVALUATION]:
         """
         Get stored last function evaluations at given position vector.
 
@@ -56,3 +63,5 @@ class Backup:
         """
         return [self._backup_array[problem_index].get(tuple(position), (0, 0.))
                 for problem_index, position in enumerate(positions)]
+
+    # endregion

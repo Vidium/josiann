@@ -4,10 +4,7 @@
 
 # ====================================================
 # imports
-from .sa import parallel_sa
-from .moves import ParallelMove, ParallelSetStep
+from .sa import psa         # noqa: F401
 
 # ====================================================
 # code
-__all__ = ['parallel_sa',
-           'ParallelMove', 'ParallelSetStep']

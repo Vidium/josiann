@@ -9,15 +9,11 @@ This package provides an implementation of the simulated annealing method for mi
 
 # ====================================================
 # imports
-from .sa import sa
-from .moves import Move, RandomStep, Metropolis, Metropolis1D, Stretch, StretchAdaptive, SetStep, SetStretch
-from .storage import Result, Trace
-from .parallel import parallel_sa, ParallelMove, ParallelSetStep
+from josiann.sequential.sa import sa            # noqa: F401
+from josiann.vectorized.sa import vsa           # noqa: F401
+from josiann.parallel.sa import psa             # noqa: F401
+
+from josiann.storage.result import Result       # noqa: F401
 
 # ====================================================
 # code
-__all__ = ['sa', 'parallel_sa',
-           'Move', 'ParallelMove',
-           'RandomStep', 'Metropolis', 'Metropolis1D', 'SetStep', 'Stretch', 'StretchAdaptive', 'SetStretch',
-           'ParallelSetStep',
-           'Trace', 'Result']

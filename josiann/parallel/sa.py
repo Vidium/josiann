@@ -4,44 +4,48 @@
 
 # ====================================================
 # imports
-from __future__ import annotations
-
 import time
+import traceback
+
 import numpy as np
 from tqdm.autonotebook import tqdm
+from tqdm.autonotebook import trange
 
-from typing import Callable, Sequence, Any
+from typing import Any
+from typing import Sequence
 
-from josiann.utils import n, T, sigma
-from josiann.storage import Result
-from .__mappers import VectorizedExecutor
-from .storage import initialize_sa, ParallelTrace
-from .moves import ParallelMove, ParallelSetStep
+from josiann.compute import n, T, sigma
+from josiann.parallel.mappers import vectorized_execution
+from josiann.parallel.storage.parameters import initialize_sa
+from josiann.parallel.storage.trace import ParallelTrace
+from josiann.storage.result import Result
+from josiann.parallel.moves import ParallelMove, ParallelSetStep
+from josiann.typing import VECT_FUN_TYPE
 
 
 # ====================================================
 # code
-def parallel_sa(fun: Callable[[Any, ...], float | list[float] | np.ndarray],
-                x0: np.ndarray,
-                parallel_args: Sequence[np.ndarray] | None = None,
-                args: Sequence[Any] | None = None,
-                bounds: Sequence[tuple[float, float]] | None = None,
-                moves: ParallelMove | Sequence[ParallelMove] | Sequence[tuple[float, ParallelMove]] = ParallelSetStep(
-                    np.tile(np.arange(-1, 1.1, 0.1), (2, 1))),
-                max_iter: int = 200,
-                max_measures: int = 20,
-                final_acceptance_probability: float = 1e-300,
-                epsilon: float = 0.01,
-                T_0: float = 5.,
-                tol: float = 1e-3,
-                backup: bool = False,
-                seed: int | None = None,
-                verbose: bool = True,
-                leave_progress_bar: bool = True,
-                suppress_warnings: bool = False,
-                detect_convergence: bool = True,
-                window_size: int | None = None,
-                dtype: np.dtype = np.float64) -> Result:
+def psa(fun: VECT_FUN_TYPE,
+        x0: np.ndarray,
+        parallel_args: Sequence[np.ndarray] | None = None,
+        args: Sequence[Any] | None = None,
+        bounds: Sequence[tuple[float, float]] | None = None,
+        moves: ParallelMove | Sequence[ParallelMove] | Sequence[tuple[float, ParallelMove]] = ParallelSetStep(
+            np.tile(np.arange(-1, 1.1, 0.1), (2, 1))),
+        max_iter: int = 200,
+        max_measures: int = 20,
+        final_acceptance_probability: float = 1e-300,
+        epsilon: float = 0.01,
+        T_0: float = 5.,
+        tol: float = 1e-3,
+        backup: bool = False,
+        seed: int = int(time.time()),
+        verbose: bool = True,
+        leave_progress_bar: bool = True,
+        suppress_warnings: bool = False,
+        detect_convergence: bool = True,
+        window_size: int | None = None,
+        dtype: type[np.dtype] | type[np.number] = np.float64) -> Result:
     """
     Simulated Annealing for minimizing noisy cost functions in parallel. This is equivalent to running several
         Josiann.sa instances in parallel but all independent optimization problems are treated at once.
@@ -85,10 +89,6 @@ def parallel_sa(fun: Callable[[Any, ...], float | list[float] | np.ndarray],
     Returns:
         A Result object.
     """
-    if seed is None:
-        seed = int(time.time())
-    np.random.seed(seed)
-
     params = initialize_sa(parallel_args, args, x0, max_iter, max_measures, final_acceptance_probability, epsilon,
                            T_0, tol, moves, bounds, fun, backup, suppress_warnings, detect_convergence,
                            window_size, seed, dtype)
@@ -98,78 +98,84 @@ def parallel_sa(fun: Callable[[Any, ...], float | list[float] | np.ndarray],
     last_ns = params.last_ns
 
     # initialize the trace history keeper
-    trace = ParallelTrace(params.base.max_iter, x.shape,
-                          window_size=params.window_size,
-                          bounds=np.array(bounds),
-                          detect_convergence=params.base.detect_convergence,
-                          max_measures=params.base.max_measures,
-                          convergence_tolerance=params.base.tol)
-    trace.initialize(x, costs)
+    trace = ParallelTrace(nb_iterations=params.base.max_iter,
+                          nb_walkers=x.shape[0],
+                          nb_dimensions=x.shape[1],
+                          run_parameters=params,
+                          initial_position=x,
+                          initial_cost=np.array(costs))
 
+    progress_bar: range | tqdm
     if verbose:
-        progress_bar = tqdm(range(params.base.max_iter), unit='iteration', leave=leave_progress_bar)
+        progress_bar = trange(params.base.max_iter, unit='iteration', leave=leave_progress_bar)
     else:
         progress_bar = range(params.base.max_iter)
 
     # run the SA algorithm
-    with VectorizedExecutor() as ex:
-        # try:
-        for iteration in progress_bar:
-            start = time.time()
+    iteration = 0
 
-            temperature = T(iteration, params.base.T_0, params.base.alpha)
-            current_n = n(iteration, params.base.max_measures, params.base.sigma_max, params.base.T_0,
-                          params.base.alpha, params.base.epsilon)
-            accepted = [False for _ in range(params.parallel.nb_parallel_problems)]
+    for iteration in progress_bar:
+        temperature = T(iteration, params.base.T_0, params.base.alpha)
+        current_n = n(iteration, params.base)
+        current_sigma = sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon)
 
-            updates = ex.map(params.fun,
-                             x.copy(),
-                             trace.converged,
-                             costs=costs,
-                             current_n=current_n,
-                             last_ns=last_ns,
-                             parallel_args=params.base.parallel_args,
-                             args=params.base.args,
-                             list_moves=params.moves.list_moves,
-                             list_probabilities=params.moves.list_probabilities,
-                             temperature=temperature,
-                             positions=x.copy(),
-                             backup=params.backup)
+        accepted = np.zeros(params.parallel.nb_walkers, dtype=bool)
+        explored = np.zeros((params.parallel.nb_walkers, params.base.nb_dimensions))
+        explored_costs = np.zeros(params.parallel.nb_walkers)
 
-            explored = np.zeros((params.parallel.nb_parallel_problems, params.base.nb_dimensions))
+        start = time.perf_counter()
 
-            for _x, _cost, _last_n, _accepted, _walker_index in updates:
+        try:
+            updates = vectorized_execution(params.fun,
+                                           x.copy(),
+                                           trace.positions.converged,
+                                           costs=costs,
+                                           current_n=current_n,
+                                           last_ns=last_ns,
+                                           parallel_args=params.base.parallel_args,
+                                           args=params.base.args,
+                                           list_moves=params.moves.list_moves,
+                                           list_probabilities=params.moves.list_probabilities,
+                                           temperature=temperature,
+                                           positions=x.copy(),
+                                           backup=params.backup)
+
+            for _x, _cost, _accepted, _walker_index in updates:
                 if _accepted:
+                    # update positions, costs, n
                     x[_walker_index] = _x
                     costs[_walker_index] = _cost
-                    last_ns[_walker_index] = _last_n
-                    accepted[_walker_index] = _accepted
+                    last_ns[_walker_index] = current_n
 
+                accepted[_walker_index] = _accepted
                 explored[_walker_index] = _x
+                explored_costs[_walker_index] = _cost
 
-            index = trace.store(x, costs, temperature, current_n,
-                                sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon),
-                                accepted, explored)
+        except Exception:
+            message = f'Unexpected failure while evaluating cost function : \n' \
+                      f'{traceback.format_exc()}'
+            success = False
+            break
 
-            best_positions, best_costs, best_indices = trace.get_best()
+        elapsed = time.perf_counter() - start
 
-            trace.update(index, best_positions, best_costs, best_indices, time.time() - start)
+        trace.positions.store(iteration, x, np.array(costs), current_n, accepted, explored, explored_costs)
+        trace.parameters.store(iteration, temperature, current_n, current_sigma, elapsed)
 
-            if verbose:
-                progress_bar.set_description(f"T: {temperature:.4f}"
-                                             f"  Converged: {np.sum(trace.converged)}"
-                                             f"/{params.parallel.nb_parallel_problems}")
+        if isinstance(progress_bar, tqdm):
+            progress_bar.set_description(
+                f"T: {temperature:.4f}"
+                f"  n: {current_n}"
+                f"  Converged: {np.sum(trace.positions.converged)}/{params.parallel.nb_walkers}"
+            )
 
-            if np.all(trace.converged):
-                message, success = 'Convergence tolerance reached.', True
-                break
+        if np.all(trace.positions.converged):
+            message, success = 'Convergence tolerance reached.', True
+            break
 
-        else:
-            message, success = 'Requested number of iterations reached.', False
+    else:
+        message, success = 'Requested number of iterations reached.', False
 
-        # except Exception:
-        #     message, success = f'Unexpected failure : \n{traceback.format_exc()}', False
-
-    trace.finalize()
+    trace.finalize(iteration)
 
     return Result(message, success, trace, params)
