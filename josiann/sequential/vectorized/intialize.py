@@ -4,32 +4,37 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 from attrs import frozen
 
+import numpy.typing as npt
 from typing import Any
 from typing import Sequence
-from typing import Callable
 
-from josiann.backup import SequentialBackup
-from josiann.moves import Move
-from josiann.moves import parse_moves
+from josiann.backup.backup import SequentialBackup
+from josiann.moves.base import Move
+from josiann.moves.parse import parse_moves
 from josiann.storage.parameters import MoveParameters
-from josiann.storage.parameters import ParallelParameters
+from josiann.storage.parameters import MultiParameters
 from josiann.storage.parameters import SAParameters
 from josiann.storage.parameters import check_base_parameters
 from josiann.storage.parameters import check_bounds
-from josiann.vectorized.compute import get_evaluation_vectorized_mean_cost
-from josiann.vectorized.compute import get_walker_vectorized_mean_cost
+from josiann.sequential.vectorized.compute import get_evaluation_vectorized_mean_cost
+from josiann.sequential.vectorized.compute import get_walker_vectorized_mean_cost
+
+import josiann.typing as jot
 
 
 # ====================================================
 # code
 @frozen(kw_only=True)
-class VectorizedParallelParameters(ParallelParameters):
+class VectorizedMultiParameters(MultiParameters):
     """
     Object for storing the parameters managing the calls to parallel or vectorized cost functions.
     """
+
     vectorized_on_evaluations: bool
     vectorized_skip_marker: Any
     nb_slots_per_walker: list[int]
@@ -40,11 +45,13 @@ class VectorizedSAParameters(SAParameters):
     """
     Object for storing the parameters used for running the SA algorithm.
     """
-    parallel: VectorizedParallelParameters
+
+    multi: VectorizedMultiParameters
+    fun: jot.VECT_FUN_TYPE
+    backup: SequentialBackup
 
 
-def _get_slots_per_walker(slots: int,
-                          nb_walkers: int) -> list[int]:
+def _get_slots_per_walker(slots: int, nb_walkers: int) -> list[int]:
     """
     Assign to each walker an approximately equal number of slots.
 
@@ -57,13 +64,17 @@ def _get_slots_per_walker(slots: int,
     """
     per_walker, plus_one = divmod(slots, nb_walkers)
 
-    return [per_walker + 1 for _ in range(plus_one)] + [per_walker for _ in range(nb_walkers - plus_one)]
+    return [per_walker + 1 for _ in range(plus_one)] + [
+        per_walker for _ in range(nb_walkers - plus_one)
+    ]
 
 
-def check_parallel_parameters(nb_walkers: int,
-                              vectorized_on_evaluations: bool,
-                              vectorized_skip_marker: Any,
-                              nb_slots: int | None) -> VectorizedParallelParameters:
+def check_multi_parameters(
+    nb_walkers: int,
+    vectorized_on_evaluations: bool,
+    vectorized_skip_marker: Any,
+    nb_slots: int | None,
+) -> VectorizedMultiParameters:
     """
     Check validity of parallel parameters.
 
@@ -83,38 +94,44 @@ def check_parallel_parameters(nb_walkers: int,
         nb_slots_per_walker = [1 for _ in range(nb_walkers)]
 
     elif nb_slots < nb_walkers:
-        raise ValueError(f"nb_slots ({nb_slots}) is less than the number of walkers ({nb_walkers})!")
+        raise ValueError(
+            f"nb_slots ({nb_slots}) is less than the number of walkers ({nb_walkers})!"
+        )
 
     else:
         nb_slots_per_walker = _get_slots_per_walker(nb_slots, nb_walkers)
 
-    return VectorizedParallelParameters(nb_walkers=nb_walkers,
-                                        vectorized_on_evaluations=vectorized_on_evaluations,
-                                        vectorized_skip_marker=vectorized_skip_marker,
-                                        nb_slots_per_walker=nb_slots_per_walker)
+    return VectorizedMultiParameters(
+        nb_walkers=nb_walkers,
+        vectorized_on_evaluations=vectorized_on_evaluations,
+        vectorized_skip_marker=vectorized_skip_marker,
+        nb_slots_per_walker=nb_slots_per_walker,
+    )
 
 
-def initialize_sa(args: Sequence | None,
-                  x0: np.ndarray,
-                  nb_walkers: int,
-                  max_iter: int,
-                  max_measures: int,
-                  final_acceptance_probability: float,
-                  epsilon: float,
-                  T_0: float,
-                  tol: float,
-                  moves: Move | Sequence[Move] | Sequence[tuple[float, Move]],
-                  bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
-                  fun: Callable[[np.ndarray, Any], list[float]],
-                  vectorized_on_evaluations: bool,
-                  vectorized_skip_marker: Any,
-                  backup: bool,
-                  nb_slots: int | None,
-                  suppress_warnings: bool,
-                  detect_convergence: bool,
-                  window_size: int | None,
-                  seed: int,
-                  dtype: type[np.dtype] | type[np.number]) -> VectorizedSAParameters:
+def initialize_vsa(
+    args: tuple[Any, ...] | None,
+    x0: npt.NDArray[Any],
+    nb_walkers: int,
+    max_iter: int,
+    max_measures: int,
+    final_acceptance_probability: float,
+    epsilon: float,
+    T_0: float,
+    tol: float,
+    moves: Move | Sequence[Move] | Sequence[tuple[float, Move]],
+    bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
+    fun: jot.VECT_FUN_TYPE,
+    vectorized_on_evaluations: bool,
+    vectorized_skip_marker: Any,
+    backup: bool,
+    nb_slots: int | None,
+    suppress_warnings: bool,
+    detect_convergence: bool,
+    window_size: int | None,
+    seed: int,
+    dtype: jot.DType,
+) -> VectorizedSAParameters:
     """
     Check validity of parameters and compute initial values before running the SA algorithm.
 
@@ -161,14 +178,25 @@ def initialize_sa(args: Sequence | None,
     np.random.seed(seed)
 
     # base parameters
-    base_parameters = check_base_parameters(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability,
-                                            epsilon, T_0, tol, suppress_warnings, detect_convergence, dtype)
+    base_parameters = check_base_parameters(
+        args,
+        x0,
+        nb_walkers,
+        max_iter,
+        max_measures,
+        final_acceptance_probability,
+        epsilon,
+        T_0,
+        tol,
+        suppress_warnings,
+        detect_convergence,
+        dtype,
+    )
 
-    # parallel parameters
-    parallel_parameters = check_parallel_parameters(nb_walkers,
-                                                    vectorized_on_evaluations,
-                                                    vectorized_skip_marker,
-                                                    nb_slots)
+    # multi parameters
+    multi_parameters = check_multi_parameters(
+        nb_walkers, vectorized_on_evaluations, vectorized_skip_marker, nb_slots
+    )
 
     # bounds
     check_bounds(bounds, base_parameters.x0)
@@ -187,39 +215,48 @@ def initialize_sa(args: Sequence | None,
             base_parameters.x0,
             1,
             base_parameters.args,
-            [(0, 0.) for _ in range(len(base_parameters.x0))]
+            [(0, 0.0) for _ in range(len(base_parameters.x0))],
         )
 
     else:
-        init_x = np.zeros((sum(parallel_parameters.nb_slots_per_walker), x0.shape[1]))
-        init_x[0:len(base_parameters.x0)] = base_parameters.x0
+        init_x = np.zeros((sum(multi_parameters.nb_slots_per_walker), x0.shape[1]))
+        init_x[0 : len(base_parameters.x0)] = base_parameters.x0
         costs = get_walker_vectorized_mean_cost(
             fun,
             init_x,
             1,
             base_parameters.args,
-            [(0, 0.) for _ in range(len(base_parameters.x0))] +
-            [(max_iter, 0.) for _ in range(sum(parallel_parameters.nb_slots_per_walker) - len(base_parameters.x0))],
-            vectorized_skip_marker
-        )[0:len(base_parameters.x0)]
+            [(0, 0.0) for _ in range(len(base_parameters.x0))]
+            + [
+                (max_iter, 0.0)
+                for _ in range(
+                    sum(multi_parameters.nb_slots_per_walker) - len(base_parameters.x0)
+                )
+            ],
+            vectorized_skip_marker,
+        )[0 : len(base_parameters.x0)]
 
     last_ns = [1 for _ in range(nb_walkers)]
 
     # window size
     if window_size is not None:
         if max_iter < window_size < 1:
-            raise ValueError(f"Invalid window size '{window_size}', should be in [{1}, {max_iter}].")
+            raise ValueError(
+                f"Invalid window size '{window_size}', should be in [{1}, {max_iter}]."
+            )
 
     else:
         # window_size = max(1, min(50, int(0.1 * max_iter)))
         window_size = max(50, int(0.1 * max_iter))
 
-    return VectorizedSAParameters(base=base_parameters,
-                                  parallel=parallel_parameters,
-                                  moves=move_parameters,
-                                  fun=fun,
-                                  backup=backup_storage,
-                                  costs=costs,
-                                  last_ns=last_ns,
-                                  window_size=window_size,
-                                  seed=seed)
+    return VectorizedSAParameters(
+        base=base_parameters,
+        multi=multi_parameters,
+        moves=move_parameters,
+        fun=fun,
+        backup=backup_storage,
+        costs=costs,
+        last_ns=last_ns,
+        window_size=window_size,
+        seed=seed,
+    )

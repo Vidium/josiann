@@ -4,19 +4,25 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 
+import numpy.typing as npt
 from typing import Any
-from typing import Callable
+
+import josiann.typing as jot
 
 
 # ====================================================
 # code
-def get_evaluation_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], list[float]],
-                                        x: np.ndarray,
-                                        _n: int,
-                                        args: tuple,
-                                        previous_evaluations: list[tuple[int, float]]) -> list[float]:
+def get_evaluation_vectorized_mean_cost(
+    fun: jot.VECT_FUN_TYPE,
+    x: npt.NDArray[np.float64 | np.int64],
+    _n: int,
+    args: tuple[Any, ...],
+    previous_evaluations: list[tuple[int, float]],
+) -> list[float]:
     """
     Same as 'get_mean_cost' but <fun> is a vectorized function and costs are computed for all walkers at once.
 
@@ -31,14 +37,16 @@ def get_evaluation_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], list[fl
     Returns:
         The mean of function evaluations at x.
     """
-    evaluations = [0. for _ in range(len(x))]
+    evaluations = [0.0 for _ in range(len(x))]
 
     for walker_index, walker_position in enumerate(x):
         last_n, last_mean = previous_evaluations[walker_index]
         remaining_n = _n - last_n
         if remaining_n:
-            evaluations[walker_index] = last_mean * last_n / _n + \
-                sum(fun(np.tile(walker_position, (remaining_n, 1)), *args)) / _n
+            evaluations[walker_index] = (
+                last_mean * last_n / _n
+                + sum(fun(np.tile(walker_position, (remaining_n, 1)), *args)) / _n
+            )
 
         else:
             evaluations[walker_index] = last_mean
@@ -46,12 +54,14 @@ def get_evaluation_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], list[fl
     return evaluations
 
 
-def get_walker_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], list[float]],
-                                    x: np.ndarray,
-                                    _n: int,
-                                    args: tuple,
-                                    previous_evaluations: list[tuple[int, float]],
-                                    vectorized_skip_marker: Any) -> list[float]:
+def get_walker_vectorized_mean_cost(
+    fun: jot.VECT_FUN_TYPE,
+    x: npt.NDArray[np.float64 | np.int64],
+    _n: int,
+    args: tuple[Any, ...],
+    previous_evaluations: list[tuple[int, float]],
+    vectorized_skip_marker: Any,
+) -> list[float]:
     """
     Same as 'get_mean_cost' but <fun> is a vectorized function and costs are computed for all walkers at once but
         sequentially on function evaluations.
@@ -69,7 +79,9 @@ def get_walker_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], list[float]
     Returns:
         The mean of function evaluations at x.
     """
-    zipped_last = zip(*[previous_evaluations[walker_index] for walker_index, _ in enumerate(x)])
+    zipped_last = zip(
+        *[previous_evaluations[walker_index] for walker_index, _ in enumerate(x)]
+    )
     last_n = list(next(zipped_last))
     remaining_n = [_n - ln for ln in last_n]
     last_mean = list(next(zipped_last))
@@ -78,18 +90,23 @@ def get_walker_vectorized_mean_cost(fun: Callable[[np.ndarray, Any], list[float]
         costs = np.zeros(len(x))
 
         for eval_index in range(max(remaining_n)):
-            eval_vector = np.array([walker_position if eval_index < remaining_n[walker_index] else
-                                    vectorized_skip_marker
-                                    for walker_index, walker_position in enumerate(x)])
+            eval_vector = np.array(
+                [
+                    walker_position
+                    if eval_index < remaining_n[walker_index]
+                    else vectorized_skip_marker
+                    for walker_index, walker_position in enumerate(x)
+                ]
+            )
 
             res = np.array(fun(eval_vector, *args))
 
             for walker_index, _ in enumerate(res):
                 if eval_index >= remaining_n[walker_index]:
-                    res[walker_index] = 0.
+                    res[walker_index] = 0.0
 
             costs += res
 
-        return (np.array(last_mean) * last_n + costs) / _n
+        return list((np.array(last_mean) * last_n + costs) / _n)
 
     return last_mean

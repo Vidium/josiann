@@ -6,8 +6,8 @@
 # imports
 from attrs import frozen
 
-from .trace import Trace
-from .parameters import SAParameters
+from josiann.storage.trace import Trace
+from josiann.storage.parameters import SAParameters
 
 
 # ====================================================
@@ -17,6 +17,7 @@ class Result:
     """
     Object for storing the results of a run.
     """
+
     message: str
     success: bool
     trace: Trace

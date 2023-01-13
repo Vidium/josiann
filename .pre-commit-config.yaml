@@ -1,0 +1,27 @@
+fail_fast: false
+
+repos:
+  - repo: https://github.com/ambv/black
+    rev: 22.12.0
+    hooks:
+      - id: black
+        language_version: python3.9
+
+  - repo: https://github.com/pycqa/pylint
+    rev: v2.15.8
+    hooks:
+      - id: pylint
+        args: [--disable=all, --enable=unused-import]
+        language_version: python3.9
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v0.991
+    hooks:
+      - id: mypy
+        exclude: ^tests/
+        args: [--strict]
+        additional_dependencies:
+          - "numpy==1.24.1"
+          - "attrs==22.2.0"
+          - "types-attrs==19.1.0"
+        language_version: python3.9

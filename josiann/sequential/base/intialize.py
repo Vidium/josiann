@@ -4,87 +4,60 @@
 
 # ====================================================
 # imports
-from multiprocessing import cpu_count
+from __future__ import annotations
 
 import numpy as np
 from attrs import frozen
 
+import numpy.typing as npt
+from typing import Any
 from typing import Sequence
 
-from josiann.backup import SequentialBackup
-from josiann.compute import get_mean_cost
-from josiann.moves import Move
-from josiann.moves import parse_moves
+from josiann.backup.backup import SequentialBackup
+from josiann.sequential.base.compute import get_mean_cost
+from josiann.moves.base import Move
+from josiann.moves.parse import parse_moves
 from josiann.storage.parameters import MoveParameters
-from josiann.storage.parameters import ParallelParameters
+from josiann.storage.parameters import MultiParameters
 from josiann.storage.parameters import SAParameters
 from josiann.storage.parameters import check_base_parameters
 from josiann.storage.parameters import check_bounds
-from josiann.typing import FUN_TYPE
+
+import josiann.typing as jot
 
 
 # ====================================================
 # code
 @frozen(kw_only=True)
-class SequentialParallelParameters(ParallelParameters):
-    """
-    Object for storing the parameters managing the calls to parallel or vectorized cost functions.
-    """
-    nb_cores: int
-
-
-@frozen(kw_only=True)
 class SequentialSAParameters(SAParameters):
     """
     Object for storing the parameters used for running the SA algorithm.
     """
-    parallel: SequentialParallelParameters
+
+    fun: jot.FUN_TYPE
+    backup: SequentialBackup
 
 
-def check_parallel_parameters(nb_walkers: int,
-                              nb_cores: int) -> SequentialParallelParameters:
-    """
-    Check validity of parallel parameters.
-
-    Args:
-        nb_walkers: the number of parallel walkers in the ensemble.
-        nb_cores: number of cores that can be used to move walkers in parallel.
-
-    Returns:
-        ParallelParameters.
-    """
-    # nb_cores
-    nb_cores = int(nb_cores)
-
-    if nb_cores < 1:
-        raise ValueError('Cannot use less than one core.')
-
-    if nb_cores > cpu_count():
-        raise ValueError(f"Cannot use more than available CPUs ({cpu_count()}).")
-
-    return SequentialParallelParameters(nb_walkers=nb_walkers,
-                                        nb_cores=nb_cores)
-
-
-def initialize_sa(args: Sequence | None,
-                  x0: np.ndarray,
-                  nb_walkers: int,
-                  max_iter: int,
-                  max_measures: int,
-                  final_acceptance_probability: float,
-                  epsilon: float,
-                  T_0: float,
-                  tol: float,
-                  moves: Move | Sequence[Move] | Sequence[tuple[float, Move]],
-                  bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
-                  fun: FUN_TYPE,
-                  nb_cores: int,
-                  backup: bool,
-                  suppress_warnings: bool,
-                  detect_convergence: bool,
-                  window_size: int | None,
-                  seed: int,
-                  dtype: type[np.dtype] | type[np.number]) -> SequentialSAParameters:
+def initialize_sa(
+    args: tuple[Any, ...] | None,
+    x0: npt.NDArray[Any],
+    nb_walkers: int,
+    max_iter: int,
+    max_measures: int,
+    final_acceptance_probability: float,
+    epsilon: float,
+    T_0: float,
+    tol: float,
+    moves: Move | Sequence[Move] | Sequence[tuple[float, Move]],
+    bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
+    fun: jot.FUN_TYPE,
+    backup: bool,
+    suppress_warnings: bool,
+    detect_convergence: bool,
+    window_size: int | None,
+    seed: int,
+    dtype: jot.DType,
+) -> SequentialSAParameters:
     """
     Check validity of parameters and compute initial values before running the SA algorithm.
 
@@ -111,7 +84,6 @@ def initialize_sa(args: Sequence | None,
             (lower_bound, upper_bound)
             or a single (lower_bound, upper_bound) tuple of bounds to set for all dimensions.
         fun: a <d> dimensional (noisy) function to minimize.
-        nb_cores: number of cores that can be used to move walkers in parallel.
         backup: use Backup for storing previously computed function evaluations and reusing them when returning to
             the same position vector ? (Only available when using SetStep moves).
         suppress_warnings: remove warnings ?
@@ -127,11 +99,23 @@ def initialize_sa(args: Sequence | None,
     np.random.seed(seed)
 
     # base parameters
-    base_parameters = check_base_parameters(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability,
-                                            epsilon, T_0, tol, suppress_warnings, detect_convergence, dtype)
+    base_parameters = check_base_parameters(
+        args,
+        x0,
+        nb_walkers,
+        max_iter,
+        max_measures,
+        final_acceptance_probability,
+        epsilon,
+        T_0,
+        tol,
+        suppress_warnings,
+        detect_convergence,
+        dtype,
+    )
 
     # parallel parameters
-    parallel_parameters = check_parallel_parameters(nb_walkers, nb_cores)
+    multi_parameters = MultiParameters(nb_walkers=nb_walkers)
 
     # bounds
     check_bounds(bounds, base_parameters.x0)
@@ -144,24 +128,31 @@ def initialize_sa(args: Sequence | None,
     backup_storage = SequentialBackup(active=move_parameters.using_SetMoves and backup)
 
     # initial costs and last_ns
-    costs = [get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.)) for x_vector in base_parameters.x0]
+    costs = [
+        get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.0))
+        for x_vector in base_parameters.x0
+    ]
 
     last_ns = [1 for _ in range(nb_walkers)]
 
     # window size
     if window_size is not None:
         if max_iter < window_size < 1:
-            raise ValueError(f"Invalid window size '{window_size}', should be in [{1}, {max_iter}].")
+            raise ValueError(
+                f"Invalid window size '{window_size}', should be in [{1}, {max_iter}]."
+            )
 
     else:
         window_size = max(50, int(0.1 * max_iter))
 
-    return SequentialSAParameters(base=base_parameters,
-                                  parallel=parallel_parameters,
-                                  moves=move_parameters,
-                                  fun=fun,
-                                  backup=backup_storage,
-                                  costs=costs,
-                                  last_ns=last_ns,
-                                  window_size=window_size,
-                                  seed=seed)
+    return SequentialSAParameters(
+        base=base_parameters,
+        multi=multi_parameters,
+        moves=move_parameters,
+        fun=fun,
+        backup=backup_storage,
+        costs=costs,
+        last_ns=last_ns,
+        window_size=window_size,
+        seed=seed,
+    )

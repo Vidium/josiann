@@ -8,21 +8,19 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import Any
-from typing import Callable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from josiann.parallel.storage.parameters import ParallelBaseParameters
+    from josiann.storage.parallel.parameters import ParallelBaseParameters
     from josiann.storage.parameters import BaseParameters
 
 
 # ====================================================
 # code
 # parameters computation --------------------------------------------------------------------------
-def acceptance_log_probability(current_cost: float,
-                               new_cost: float,
-                               temperature: float) -> float:
+def acceptance_log_probability(
+    current_cost: float, new_cost: float, temperature: float
+) -> float:
     """
     Compute the acceptance probability for a new proposed cost, given the current cost and a temperature.
 
@@ -37,10 +35,7 @@ def acceptance_log_probability(current_cost: float,
     return (current_cost - new_cost) / temperature
 
 
-def sigma(k: int,
-          T_0: float,
-          alpha: float,
-          epsilon: float) -> float:
+def sigma(k: int, T_0: float, alpha: float, epsilon: float) -> float:
     """
     Compute the estimated standard deviation at iteration k.
 
@@ -57,8 +52,7 @@ def sigma(k: int,
     return T_0 * (alpha * (1 - epsilon)) ** k
 
 
-def n(k: int,
-      parameters: BaseParameters | ParallelBaseParameters) -> int:
+def n(k: int, parameters: BaseParameters | ParallelBaseParameters) -> int:
     """
     Compute the number of necessary measures at iteration k.
 
@@ -72,16 +66,19 @@ def n(k: int,
     if parameters.max_measures == 1:
         return 1
 
-    return int(np.ceil(
-        (parameters.max_measures * parameters.sigma_max ** 2) /
-        ((parameters.max_measures - 1) *
-         sigma(k, parameters.T_0, parameters.alpha, parameters.epsilon) ** 2 + parameters.sigma_max ** 2)
-    ))
+    return int(
+        np.ceil(
+            (parameters.max_measures * parameters.sigma_max**2)
+            / (
+                (parameters.max_measures - 1)
+                * sigma(k, parameters.T_0, parameters.alpha, parameters.epsilon) ** 2
+                + parameters.sigma_max**2
+            )
+        )
+    )
 
 
-def T(k: int,
-      T_0: float,
-      alpha: float) -> float:
+def T(k: int, T_0: float, alpha: float) -> float:
     """
     Compute the temperature at iteration k.
 
@@ -93,28 +90,4 @@ def T(k: int,
     Returns:
         The temperature.
     """
-    return T_0 * alpha ** k
-
-
-# cost computation --------------------------------------------------------------------------------
-def get_mean_cost(fun: Callable[[np.ndarray, Any], float],
-                  x: np.ndarray,
-                  _n: int,
-                  args: tuple,
-                  previous_evaluations: tuple[int, float]) -> float:
-    """
-    Get the mean of <n> function evaluations for vector of values <x>.
-
-    Args:
-        fun: a function to evaluate.
-        x: a vector of values.
-        _n: the number of evaluations to compute.
-        args: arguments to be passed to <fun>.
-        previous_evaluations: previously computed function evaluations at position x: number of last function
-            evaluations and obtained mean.
-
-    Returns:
-        The mean of function evaluations at x.
-    """
-    last_n, last_mean = previous_evaluations
-    return last_mean * last_n / _n + sum([max(0., fun(x, *args)) for _ in range(_n - last_n)]) / _n
+    return T_0 * alpha**k

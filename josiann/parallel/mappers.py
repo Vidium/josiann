@@ -4,8 +4,11 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 
+import numpy.typing as npt
 from typing import Any
 from typing import cast
 from typing import Iterable
@@ -13,27 +16,29 @@ from typing import Iterator
 from typing import Sequence
 
 from josiann.compute import acceptance_log_probability
-from josiann.typing import SA_UPDATE
-from josiann.typing import VECT_FUN_TYPE
 from josiann.parallel.compute import get_vectorized_mean_cost
-from josiann.parallel.moves import ParallelMove
-from josiann.parallel.backup import Backup
+from josiann.moves.parallel.base import ParallelMove
+from josiann.backup.parallel.backup import ParallelBackup
+
+import josiann.typing as jot
 
 
 # ====================================================
 # code
-def _vectorized_update_walker(fun: VECT_FUN_TYPE,
-                              x: np.ndarray,
-                              converged: np.ndarray,
-                              costs: Sequence[float],
-                              current_n: int,
-                              last_ns: Sequence[int],
-                              parallel_args: Sequence[np.ndarray] | None,
-                              args: tuple,
-                              list_moves: list[ParallelMove],
-                              list_probabilities: list[float],
-                              temperature: float,
-                              backup_storage: Backup) -> Iterator[SA_UPDATE]:
+def _vectorized_update_walker(
+    fun: jot.VECT_FUN_TYPE,
+    x: npt.NDArray[jot.DType],
+    converged: npt.NDArray[np.bool_],
+    costs: Sequence[float],
+    current_n: int,
+    last_ns: Sequence[int],
+    parallel_args: Sequence[npt.NDArray[Any]] | None,
+    args: tuple[Any, ...],
+    list_moves: list[ParallelMove],
+    list_probabilities: list[float],
+    temperature: float,
+    backup_storage: ParallelBackup,
+) -> Iterator[tuple[npt.NDArray[jot.DType] | float, float, bool, int]]:
     """
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
     available moves and accepting the proposed new position based on the new cost.
@@ -57,7 +62,7 @@ def _vectorized_update_walker(fun: VECT_FUN_TYPE,
         accepted.
     """
     # generate a new proposal as a neighbor of x and get its cost
-    move = np.random.choice(list_moves, p=list_probabilities)                           # type: ignore[arg-type]
+    move = np.random.choice(list_moves, p=list_probabilities)  # type: ignore[arg-type]
     proposed_positions = move.get_proposal(x[~converged], None)
 
     previous_evaluations = backup_storage.get_previous_evaluations(proposed_positions)
@@ -69,10 +74,12 @@ def _vectorized_update_walker(fun: VECT_FUN_TYPE,
         converged,
         parallel_args,
         args,
-        previous_evaluations
+        previous_evaluations,
     )
 
-    backup_storage.save(proposed_positions, [(current_n, cost) for cost in proposed_costs])
+    backup_storage.save(
+        proposed_positions, [(current_n, cost) for cost in proposed_costs]
+    )
 
     evaluation_index = 0
 
@@ -86,9 +93,9 @@ def _vectorized_update_walker(fun: VECT_FUN_TYPE,
 
             evaluation_index += 1
 
-            if acceptance_log_probability(costs[index] * current_n / last_ns[index],
-                                          proposed_cost,
-                                          temperature) > np.log(np.random.random()):
+            if acceptance_log_probability(
+                costs[index] * current_n / last_ns[index], proposed_cost, temperature
+            ) > np.log(np.random.random()):
                 accepted = True
 
             else:
@@ -97,9 +104,9 @@ def _vectorized_update_walker(fun: VECT_FUN_TYPE,
             yield position, proposed_cost, accepted, index
 
 
-def vectorized_execution(fun: VECT_FUN_TYPE,
-                         *iterables: Iterable,
-                         **kwargs: Any) -> Iterator[SA_UPDATE]:
+def vectorized_execution(
+    fun: jot.VECT_FUN_TYPE, *iterables: Iterable[Any], **kwargs: Any
+) -> Iterator[tuple[npt.NDArray[jot.DType] | float, float, bool, int]]:
     """
     Vectorized executor for calling <fn> with all parameters defined in <iterables> at once. This requires <fn> to be
     a vectorized function.
@@ -112,15 +119,17 @@ def vectorized_execution(fun: VECT_FUN_TYPE,
     Returns:
         An iterator over map(fn, *iter).
     """
-    return _vectorized_update_walker(fun,
-                                     x=cast(np.ndarray, iterables[0]),
-                                     converged=cast(np.ndarray, iterables[1]),
-                                     costs=kwargs['costs'],
-                                     current_n=kwargs['current_n'],
-                                     last_ns=kwargs['last_ns'],
-                                     parallel_args=kwargs['parallel_args'],
-                                     args=kwargs['args'],
-                                     list_moves=kwargs['list_moves'],
-                                     list_probabilities=kwargs['list_probabilities'],
-                                     temperature=kwargs['temperature'],
-                                     backup_storage=kwargs['backup'])
+    return _vectorized_update_walker(
+        fun,
+        x=cast(npt.NDArray[jot.DType], iterables[0]),
+        converged=cast(npt.NDArray[np.bool_], iterables[1]),
+        costs=kwargs["costs"],
+        current_n=kwargs["current_n"],
+        last_ns=kwargs["last_ns"],
+        parallel_args=kwargs["parallel_args"],
+        args=kwargs["args"],
+        list_moves=kwargs["list_moves"],
+        list_probabilities=kwargs["list_probabilities"],
+        temperature=kwargs["temperature"],
+        backup_storage=kwargs["backup"],
+    )

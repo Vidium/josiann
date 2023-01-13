@@ -9,11 +9,13 @@ This package provides an implementation of the simulated annealing method for mi
 
 # ====================================================
 # imports
-from josiann.sequential.sa import sa            # noqa: F401
-from josiann.vectorized.sa import vsa           # noqa: F401
-from josiann.parallel.sa import psa             # noqa: F401
+from josiann.sequential.base.sa import sa
+from josiann.sequential.vectorized.vsa import vsa
+from josiann.sequential.multicore.mcsa import mcsa
+from josiann.parallel.psa import psa
 
-from josiann.storage.result import Result       # noqa: F401
+from josiann.storage.result import Result
+from josiann.storage.trace import Trace
 
 # ====================================================
 # code

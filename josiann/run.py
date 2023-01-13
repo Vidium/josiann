@@ -8,11 +8,14 @@ Core Simulated Annealing function.
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import time
 import traceback
 import numpy as np
 from tqdm.autonotebook import tqdm
 
+import numpy.typing as npt
 from typing import Any
 
 from josiann.compute import n
@@ -21,51 +24,57 @@ from josiann.compute import sigma
 from josiann.storage.parameters import SAParameters
 from josiann.storage.result import Result
 from josiann.storage.trace import Trace
-from josiann.typing import Execution
+
+from josiann.map.typing import Execution
 
 
 # ====================================================
 # code
-def run_simulated_annealing(costs: np.ndarray,
-                            execution: Execution,
-                            last_ns: np.ndarray,
-                            nb_walkers: int,
-                            params: SAParameters,
-                            progress_bar: range | tqdm,
-                            trace: Trace,
-                            x: np.ndarray,
-                            **kwargs: Any) -> Result:
+def run_simulated_annealing(
+    costs: npt.NDArray[np.float64],
+    execution: Execution,
+    last_ns: npt.NDArray[np.int64],
+    nb_walkers: int,
+    params: SAParameters,
+    progress_bar: range | tqdm[int],
+    trace: Trace,
+    x: npt.NDArray[np.float64 | np.int64],
+    **kwargs: Any,
+) -> Result:
     iteration = 0
 
     for iteration in progress_bar:
         temperature = T(iteration, params.base.T_0, params.base.alpha)
         current_n = n(iteration, params.base)
-        current_sigma = sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon)
+        current_sigma = sigma(
+            iteration, params.base.T_0, params.base.alpha, params.base.epsilon
+        )
 
-        accepted = np.zeros(params.parallel.nb_walkers, dtype=bool)
-        rescued = np.zeros(params.parallel.nb_walkers, dtype=bool)
-        explored = np.zeros((params.parallel.nb_walkers, params.base.nb_dimensions))
-        explored_costs = np.zeros(params.parallel.nb_walkers)
+        accepted = np.zeros(params.multi.nb_walkers, dtype=bool)
+        rescued = np.zeros(params.multi.nb_walkers, dtype=bool)
+        explored = np.zeros((params.multi.nb_walkers, params.base.nb_dimensions))
+        explored_costs = np.zeros(params.multi.nb_walkers)
 
         acceptance_fraction = trace.positions.mean_acceptance_fraction(iteration)
 
         start = time.perf_counter()
 
         try:
-            updates = execution(params.fun,
-                                x=x.copy(),
-                                costs=costs,
-                                current_n=current_n,
-                                last_ns=last_ns,
-                                args=params.base.args,
-                                list_moves=params.moves.list_moves,
-                                list_probabilities=params.moves.list_probabilities,
-                                iteration=iteration,
-                                max_iter=params.base.max_iter,
-                                temperature=temperature,
-                                backup_storage=params.backup,
-                                **kwargs | {'acceptance':
-                                            acceptance_fraction if acceptance_fraction is not np.nan else 1.})
+            updates = execution(
+                params,
+                x=x.copy(),
+                costs=costs,
+                current_n=current_n,
+                last_ns=last_ns,
+                iteration=iteration,
+                temperature=temperature,
+                **kwargs
+                | dict(
+                    acceptance=acceptance_fraction
+                    if acceptance_fraction is not np.nan
+                    else 1.0
+                ),
+            )
 
             for _x, _cost, _accepted, _walker_index in updates:
                 if _accepted:
@@ -79,15 +88,21 @@ def run_simulated_annealing(costs: np.ndarray,
                 explored_costs[_walker_index] = _cost
 
         except Exception:
-            message = f'Unexpected failure while evaluating cost function : \n' \
-                      f'{traceback.format_exc()}'
+            message = (
+                f"Unexpected failure while evaluating cost function : \n"
+                f"{traceback.format_exc()}"
+            )
             success = False
             break
 
         elapsed = time.perf_counter() - start
 
-        trace.positions.store(iteration, x, np.array(costs), current_n, accepted, explored, explored_costs)
-        trace.parameters.store(iteration, temperature, current_n, current_sigma, elapsed)
+        trace.positions.store(
+            iteration, x, np.array(costs), current_n, accepted, explored, explored_costs
+        )
+        trace.parameters.store(
+            iteration, temperature, current_n, current_sigma, elapsed
+        )
 
         stuck_walkers = trace.positions.are_stuck(iteration)
         best = trace.positions.get_best(iteration)
@@ -104,34 +119,38 @@ def run_simulated_annealing(costs: np.ndarray,
         trace.positions.update(iteration, x, costs, last_ns, rescued)
 
         if isinstance(progress_bar, tqdm):
-            progress_bar.set_description(f"T: {temperature:.4f}"
-                                         f"  A: {acceptance_fraction:.2%}%"
-                                         f"  Best: {np.min(best.cost):.4f}"
-                                         f"  Current: {np.min(costs):.4f}")
+            progress_bar.set_description(
+                f"T: {temperature:.4f}"
+                f"  A: {acceptance_fraction:.2%}%"
+                f"  Best: {np.min(best.cost):.4f}"
+                f"  Current: {np.min(costs):.4f}"
+            )
 
         if np.all(trace.positions.converged):
-            message, success = 'Convergence tolerance reached.', True
+            message, success = "Convergence tolerance reached.", True
             break
 
     else:
-        message, success = 'Requested number of iterations reached.', False
+        message, success = "Requested number of iterations reached.", False
 
     trace.finalize(iteration)
 
     return Result(message, success, trace, params)
 
 
-def restart(previous: Result,
-            max_iter: int = 200,
-            max_measures: int = 20,
-            final_acceptance_probability: float = 1e-300,
-            epsilon: float = 0.01,
-            T_0: float = 5.,
-            tol: float = 1e-3,
-            verbose: bool = True,
-            suppress_warnings: bool = False,
-            detect_convergence: bool = True,
-            window_size: int | None = None) -> Result:
+def restart(
+    previous: Result,
+    max_iter: int = 200,
+    max_measures: int = 20,
+    final_acceptance_probability: float = 1e-300,
+    epsilon: float = 0.01,
+    T_0: float = 5.0,
+    tol: float = 1e-3,
+    verbose: bool = True,
+    suppress_warnings: bool = False,
+    detect_convergence: bool = True,
+    window_size: int | None = None,
+) -> Result:
     """
 
 

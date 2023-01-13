@@ -4,18 +4,29 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 from attrs import frozen
 from warnings import warn
 
-from typing import Sequence, Any, Callable
+import numpy.typing as npt
+from typing import Any
+from typing import Sequence
 
 from josiann.parallel.compute import get_vectorized_mean_cost
-from josiann.parallel.moves import ParallelMove, parse_moves
-from josiann.parallel.backup import ParallelBackup
+from josiann.moves.parallel.base import ParallelMove, parse_moves
+from josiann.backup.parallel.backup import ParallelBackup
 from josiann.storage.parameters import BaseParameters
-from josiann.storage.parameters import ParallelParameters
-from josiann.storage.parameters import check_base_parameters_core, SAParameters, check_bounds, MoveParameters
+from josiann.storage.parameters import (
+    check_base_parameters_core,
+    SAParameters,
+    check_bounds,
+    MoveParameters,
+    MultiParameters,
+)
+
+import josiann.typing as jot
 
 
 # ====================================================
@@ -25,7 +36,8 @@ class ParallelBaseParameters(BaseParameters):
     """
     Object for storing the general parameters used for running the SA algorithm.
     """
-    parallel_args: Sequence[np.ndarray] | None
+
+    parallel_args: Sequence[npt.NDArray[Any]] | None
 
     @property
     def nb_parallel_problems(self) -> int:
@@ -37,21 +49,24 @@ class ParallelSAParameters(SAParameters):
     """
     Object for storing the parameters used for running the SA algorithm.
     """
+
     base: ParallelBaseParameters
 
 
-def check_base_parameters(parallel_args: Sequence[np.ndarray] | None,
-                          args: Sequence[Any] | None,
-                          x0: np.ndarray,
-                          max_iter: int,
-                          max_measures: int,
-                          final_acceptance_probability: float,
-                          epsilon: float,
-                          T_0: float,
-                          tol: float,
-                          suppress_warnings: bool,
-                          detect_convergence: bool,
-                          dtype: type[np.dtype] | type[np.number]) -> tuple[ParallelBaseParameters, ParallelParameters]:
+def check_base_parameters(
+    parallel_args: Sequence[npt.NDArray[Any]] | None,
+    args: tuple[Any, ...] | None,
+    x0: npt.NDArray[Any],
+    max_iter: int,
+    max_measures: int,
+    final_acceptance_probability: float,
+    epsilon: float,
+    T_0: float,
+    tol: float,
+    suppress_warnings: bool,
+    detect_convergence: bool,
+    dtype: jot.DType,
+) -> tuple[ParallelBaseParameters, MultiParameters]:
     """
     Check validity of base parameters.
 
@@ -82,18 +97,24 @@ def check_base_parameters(parallel_args: Sequence[np.ndarray] | None,
     if parallel_args is not None:
         for array in parallel_args:
             if not isinstance(array, np.ndarray):
-                raise TypeError("All arrays in the parallel arguments must be numpy arrays.")
+                raise TypeError(
+                    "All arrays in the parallel arguments must be numpy arrays."
+                )
 
             if nb_parallel_problems is None:
                 nb_parallel_problems = len(array)
 
             elif nb_parallel_problems != len(array):
-                raise ValueError("Arrays of different lengths were found in the parallel arguments.")
+                raise ValueError(
+                    "Arrays of different lengths were found in the parallel arguments."
+                )
 
     # initial values
     if x0.ndim == 1:
         if nb_parallel_problems is None:
-            warn("Only one optimization problem has been defined, consider running the regular josiann.sa algorithm.")
+            warn(
+                "Only one optimization problem has been defined, consider running the regular josiann.sa algorithm."
+            )
             nb_parallel_problems = 1
 
         x0 = np.array([x0])
@@ -102,48 +123,60 @@ def check_base_parameters(parallel_args: Sequence[np.ndarray] | None,
         nb_parallel_problems = len(x0)
 
     elif len(x0) != nb_parallel_problems:
-        raise ValueError(f"'x0' defines {len(x0)} parallel problems while the parallel arguments define "
-                         f"{nb_parallel_problems} parallel problems.")
+        raise ValueError(
+            f"'x0' defines {len(x0)} parallel problems while the parallel arguments define "
+            f"{nb_parallel_problems} parallel problems."
+        )
 
-    T_0, alpha, max_iter, max_measures, sigma_max, x0 = check_base_parameters_core(T_0, epsilon,
-                                                                                   final_acceptance_probability,
-                                                                                   max_iter, max_measures,
-                                                                                   suppress_warnings, tol, x0, dtype)
+    T_0, alpha, max_iter, max_measures, sigma_max, x0 = check_base_parameters_core(
+        T_0,
+        epsilon,
+        final_acceptance_probability,
+        max_iter,
+        max_measures,
+        suppress_warnings,
+        tol,
+        x0,
+        dtype,
+    )
 
-    return ParallelBaseParameters(parallel_args=parallel_args,
-                                  args=args,
-                                  x0=x0,
-                                  max_iter=max_iter,
-                                  max_measures=max_measures,
-                                  final_acceptance_probability=final_acceptance_probability,
-                                  epsilon=epsilon,
-                                  T_0=T_0,
-                                  tol=tol,
-                                  alpha=alpha,
-                                  sigma_max=sigma_max,
-                                  suppress_warnings=suppress_warnings,
-                                  detect_convergence=detect_convergence), \
-        ParallelParameters(nb_walkers=nb_parallel_problems)
+    return ParallelBaseParameters(
+        parallel_args=parallel_args,
+        args=args,
+        x0=x0,
+        max_iter=max_iter,
+        max_measures=max_measures,
+        final_acceptance_probability=final_acceptance_probability,
+        epsilon=epsilon,
+        T_0=T_0,
+        tol=tol,
+        alpha=alpha,
+        sigma_max=sigma_max,
+        suppress_warnings=suppress_warnings,
+        detect_convergence=detect_convergence,
+    ), MultiParameters(nb_walkers=nb_parallel_problems)
 
 
-def initialize_sa(parallel_args: Sequence[np.ndarray] | None,
-                  args: Sequence[Any] | None,
-                  x0: np.ndarray,
-                  max_iter: int,
-                  max_measures: int,
-                  final_acceptance_probability: float,
-                  epsilon: float,
-                  T_0: float,
-                  tol: float,
-                  moves: ParallelMove | Sequence[ParallelMove] | Sequence[tuple[float, ParallelMove]],
-                  bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
-                  fun: Callable[[np.ndarray, Any], list[float] | float],
-                  backup: bool,
-                  suppress_warnings: bool,
-                  detect_convergence: bool,
-                  window_size: int | None,
-                  seed: int,
-                  dtype: type[np.dtype] | type[np.number]) -> ParallelSAParameters:
+def initialize_sa(
+    parallel_args: Sequence[npt.NDArray[Any]] | None,
+    args: tuple[Any, ...] | None,
+    x0: npt.NDArray[Any],
+    max_iter: int,
+    max_measures: int,
+    final_acceptance_probability: float,
+    epsilon: float,
+    T_0: float,
+    tol: float,
+    moves: ParallelMove | Sequence[ParallelMove] | Sequence[tuple[float, ParallelMove]],
+    bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
+    fun: jot.FUN_TYPE,
+    backup: bool,
+    suppress_warnings: bool,
+    detect_convergence: bool,
+    window_size: int | None,
+    seed: int,
+    dtype: jot.DType,
+) -> ParallelSAParameters:
     """
     Check validity of parameters and compute initial values before running the SA algorithm.
 
@@ -186,30 +219,43 @@ def initialize_sa(parallel_args: Sequence[np.ndarray] | None,
     np.random.seed(seed)
 
     # base parameters
-    base_parameters, parallel_parameters = check_base_parameters(parallel_args, args, x0, max_iter, max_measures,
-                                                                 final_acceptance_probability, epsilon, T_0, tol,
-                                                                 suppress_warnings, detect_convergence, dtype)
+    base_parameters, multi_parameters = check_base_parameters(
+        parallel_args,
+        args,
+        x0,
+        max_iter,
+        max_measures,
+        final_acceptance_probability,
+        epsilon,
+        T_0,
+        tol,
+        suppress_warnings,
+        detect_convergence,
+        dtype,
+    )
 
     # bounds
     check_bounds(bounds, base_parameters.x0)
 
     # move parameters
-    move_parameters = MoveParameters(*parse_moves(moves, dtype))
+    move_parameters = MoveParameters(*parse_moves(moves))
     move_parameters.set_bounds(bounds)
 
     # init backup storage
-    backup_storage = ParallelBackup(active=move_parameters.using_SetMoves and backup,
-                                    nb_parallel_problems=base_parameters.nb_parallel_problems)
+    backup_storage = ParallelBackup(
+        active=move_parameters.using_SetMoves and backup,
+        nb_parallel_problems=base_parameters.nb_parallel_problems,
+    )
 
     # initial costs and last_ns
     costs = get_vectorized_mean_cost(
         fun,
         base_parameters.x0,
         1,
-        np.array([False for _ in range(parallel_parameters.nb_walkers)]),
+        np.array([False for _ in range(multi_parameters.nb_walkers)]),
         base_parameters.parallel_args,
         base_parameters.args,
-        [(0, 0.) for _ in range(base_parameters.nb_parallel_problems)]
+        [(0, 0.0) for _ in range(base_parameters.nb_parallel_problems)],
     )
 
     last_ns = [1 for _ in range(base_parameters.nb_parallel_problems)]
@@ -217,17 +263,21 @@ def initialize_sa(parallel_args: Sequence[np.ndarray] | None,
     # window size
     if window_size is not None:
         if max_iter < window_size < 1:
-            raise ValueError(f"Invalid window size '{window_size}', should be in [{1}, {max_iter}].")
+            raise ValueError(
+                f"Invalid window size '{window_size}', should be in [{1}, {max_iter}]."
+            )
 
     else:
         window_size = max(50, int(0.1 * max_iter))
 
-    return ParallelSAParameters(base=base_parameters,
-                                parallel=parallel_parameters,
-                                moves=move_parameters,
-                                fun=fun,
-                                backup=backup_storage,
-                                costs=costs,
-                                last_ns=last_ns,
-                                window_size=window_size,
-                                seed=seed)
+    return ParallelSAParameters(
+        base=base_parameters,
+        multi=multi_parameters,
+        moves=move_parameters,
+        fun=fun,
+        backup=backup_storage,
+        costs=costs,
+        last_ns=last_ns,
+        window_size=window_size,
+        seed=seed,
+    )

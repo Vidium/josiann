@@ -4,49 +4,56 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import time
 import numpy as np
 from tqdm.autonotebook import tqdm
 from tqdm.autonotebook import trange
 
+import numpy.typing as npt
 from typing import Any
 from typing import Sequence
 
-from josiann.moves import Move
-from josiann.moves import RandomStep
-from josiann.vectorized.mappers import vectorized_execution
+from josiann.moves.base import Move
+from josiann.moves.sequential import RandomStep
+from josiann.map.vectorized import vectorized_execution
 from josiann.run import run_simulated_annealing
 from josiann.storage.result import Result
 from josiann.storage.trace import OneTrace
-from josiann.typing import VECT_FUN_TYPE
-from josiann.vectorized.intialize import initialize_sa
+from josiann.sequential.vectorized.intialize import initialize_vsa
+
+import josiann.typing as jot
 
 
 # ====================================================
 # code
-def vsa(fun: VECT_FUN_TYPE,
-        x0: np.ndarray,
-        args: Sequence | None = None,
-        bounds: Sequence[tuple[float, float]] | None = None,
-        moves: Move | Sequence[Move] | Sequence[tuple[float, Move]] = ((0.8, RandomStep(0.05)),
-                                                                       (0.2, RandomStep(0.5))),
-        nb_walkers: int = 1,
-        max_iter: int = 200,
-        max_measures: int = 20,
-        final_acceptance_probability: float = 1e-300,
-        epsilon: float = 0.01,
-        T_0: float = 5.,
-        tol: float = 1e-3,
-        vectorized_on_evaluations: bool = True,
-        vectorized_skip_marker: Any = None,
-        backup: bool = False,
-        nb_slots: int | None = None,
-        seed: int = int(time.time()),
-        verbose: bool = True,
-        suppress_warnings: bool = False,
-        detect_convergence: bool = True,
-        window_size: int | None = None,
-        dtype: type[np.dtype] | type[np.number] = np.float64) -> Result:
+def vsa(
+    fun: jot.VECT_FUN_TYPE,
+    x0: npt.NDArray[np.float64 | np.int64],
+    args: tuple[Any, ...] | None = None,
+    bounds: Sequence[tuple[float, float]] | None = None,
+    moves: Move
+    | Sequence[Move]
+    | Sequence[tuple[float, Move]] = ((0.8, RandomStep(0.05)), (0.2, RandomStep(0.5))),
+    nb_walkers: int = 1,
+    max_iter: int = 200,
+    max_measures: int = 20,
+    final_acceptance_probability: float = 1e-300,
+    epsilon: float = 0.01,
+    T_0: float = 5.0,
+    tol: float = 1e-3,
+    vectorized_on_evaluations: bool = True,
+    vectorized_skip_marker: Any = None,
+    backup: bool = False,
+    nb_slots: int | None = None,
+    seed: int = int(time.time()),
+    verbose: bool = True,
+    suppress_warnings: bool = False,
+    detect_convergence: bool = True,
+    window_size: int | None = None,
+    dtype: jot.DType = np.float64,  # type: ignore[assignment]
+) -> Result:
     """
     Simulated Annealing for minimizing vectorized noisy cost functions for computing multiple function evaluations at
     once.
@@ -113,37 +120,61 @@ def vsa(fun: VECT_FUN_TYPE,
     Returns:
         A Result object.
     """
-    params = initialize_sa(args, x0, nb_walkers, max_iter, max_measures, final_acceptance_probability, epsilon,
-                           T_0, tol, moves, bounds, fun, vectorized_on_evaluations, vectorized_skip_marker,
-                           backup, nb_slots, suppress_warnings, detect_convergence, window_size, seed, dtype)
+    params = initialize_vsa(
+        args,
+        x0,
+        nb_walkers,
+        max_iter,
+        max_measures,
+        final_acceptance_probability,
+        epsilon,
+        T_0,
+        tol,
+        moves,
+        bounds,
+        fun,
+        vectorized_on_evaluations,
+        vectorized_skip_marker,
+        backup,
+        nb_slots,
+        suppress_warnings,
+        detect_convergence,
+        window_size,
+        seed,
+        dtype,
+    )
 
     x = params.base.x
     costs = params.costs
     last_ns = params.last_ns
 
     # initialize the trace history keeper
-    trace = OneTrace(nb_iterations=params.base.max_iter,
-                     nb_walkers=x.shape[0],
-                     nb_dimensions=x.shape[1],
-                     run_parameters=params,
-                     initial_position=x,
-                     initial_cost=np.array(costs))
+    trace = OneTrace(
+        nb_iterations=params.base.max_iter,
+        nb_walkers=x.shape[0],
+        nb_dimensions=x.shape[1],
+        run_parameters=params,
+        initial_position=x,
+        initial_cost=np.array(costs),
+    )
 
-    progress_bar: range | tqdm
+    progress_bar: range | tqdm[int]
     if verbose:
-        progress_bar = trange(params.base.max_iter, unit='iteration')
+        progress_bar = trange(params.base.max_iter, unit="iteration")
     else:
         progress_bar = range(params.base.max_iter)
 
     # run the SA algorithm
-    return run_simulated_annealing(np.array(costs),
-                                   vectorized_execution,
-                                   np.array(last_ns),
-                                   nb_walkers,
-                                   params,
-                                   progress_bar,
-                                   trace,
-                                   x,
-                                   nb_slots=params.parallel.nb_slots_per_walker,
-                                   vectorized_on_evaluations=params.parallel.vectorized_on_evaluations,
-                                   vectorized_skip_marker=params.parallel.vectorized_skip_marker)
+    return run_simulated_annealing(
+        np.array(costs),
+        vectorized_execution,
+        np.array(last_ns),
+        nb_walkers,
+        params,
+        progress_bar,
+        trace,
+        x,
+        nb_slots=params.multi.nb_slots_per_walker,
+        vectorized_on_evaluations=params.multi.vectorized_on_evaluations,
+        vectorized_skip_marker=params.multi.vectorized_skip_marker,
+    )

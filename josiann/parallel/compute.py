@@ -4,20 +4,28 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 
-from typing import Callable, Sequence
+import numpy.typing as npt
+from typing import Any
+from typing import Sequence
+
+import josiann.typing as jot
 
 
 # ====================================================
 # code
-def get_vectorized_mean_cost(fun: Callable,
-                             x: np.ndarray,
-                             _n: int,
-                             converged: np.ndarray,
-                             parallel_args: Sequence[np.ndarray] | None,
-                             args: tuple,
-                             previous_evaluations: list[tuple[int, float]]) -> list[float]:
+def get_vectorized_mean_cost(
+    fun: jot.VECT_FUN_TYPE,
+    x: npt.NDArray[np.float64 | np.int64],
+    _n: int,
+    converged: npt.NDArray[np.bool_],
+    parallel_args: Sequence[npt.NDArray[Any]] | None,
+    args: tuple[Any, ...],
+    previous_evaluations: list[tuple[int, float]],
+) -> list[float]:
     """
     Get the mean of <n> function evaluations for vectors of values <x>.
 
@@ -35,14 +43,17 @@ def get_vectorized_mean_cost(fun: Callable,
     Returns:
         The mean of function evaluations at x.
     """
-    # TODO : switch to median
+    # TODO : is it possible to switch to median ?
 
     remaining_ns = _n - np.array([last_n for last_n, _ in previous_evaluations])
 
     all_x = np.repeat(x, remaining_ns, axis=0)
 
-    all_parallel_args = () if parallel_args is None else [np.repeat(arg[~converged], remaining_ns)
-                                                          for arg in parallel_args]
+    all_parallel_args = (
+        ()
+        if parallel_args is None
+        else [np.repeat(arg[~converged], remaining_ns) for arg in parallel_args]
+    )
 
     all_evaluations = fun(all_x, converged, *all_parallel_args, *args)
 
@@ -51,8 +62,11 @@ def get_vectorized_mean_cost(fun: Callable,
     for last_n, last_mean in previous_evaluations:
         if _n - last_n:
             evaluation_index_stop = evaluation_index_start + _n - last_n
-            evaluations.append(last_mean * last_n / _n +
-                               sum(all_evaluations[evaluation_index_start:evaluation_index_stop]) / _n)
+            evaluations.append(
+                last_mean * last_n / _n
+                + sum(all_evaluations[evaluation_index_start:evaluation_index_stop])
+                / _n
+            )
 
             evaluation_index_start = evaluation_index_stop
 
