@@ -30,7 +30,7 @@ import josiann.typing as jot
 # code
 def vsa(
     fun: jot.VECT_FUN_TYPE,
-    x0: npt.NDArray[np.float64 | np.int64],
+    x0: npt.NDArray[Any],
     args: tuple[Any, ...] | None = None,
     bounds: Sequence[tuple[float, float]] | None = None,
     moves: Move

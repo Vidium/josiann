@@ -31,7 +31,7 @@ import josiann.typing as jot
 # code
 def psa(
     fun: jot.VECT_FUN_TYPE,
-    x0: npt.NDArray[np.float64 | np.int64],
+    x0: npt.NDArray[Any],
     parallel_args: Sequence[npt.NDArray[Any]] | None = None,
     args: tuple[Any, ...] | None = None,
     bounds: Sequence[tuple[float, float]] | None = None,
