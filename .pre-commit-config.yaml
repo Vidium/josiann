@@ -18,7 +18,7 @@ repos:
     rev: v0.991
     hooks:
       - id: mypy
-        exclude: ^tests/
+        exclude: (^tests/)|(^doc/)
         args: [--strict]
         additional_dependencies:
           - "numpy==1.24.1"

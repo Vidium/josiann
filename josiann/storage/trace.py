@@ -501,7 +501,7 @@ class Trace(ABC):
             cols=1,
             shared_xaxes=True,
             subplot_titles=titles,
-            vertical_spacing=min(0.05, 1 / (4 - 1)),
+            vertical_spacing=0.1,
         )
 
         if self.nb_iterations:
@@ -578,9 +578,12 @@ class Trace(ABC):
             )
 
         fig.update_layout(
-            height=150 * (self.nb_dimensions + 1),
+            height=800,
             width=600,
             margin=dict(t=40, b=10, l=10, r=10),
+            paper_bgcolor="#FFF",
+            plot_bgcolor="#FFF",
+            font_color="#000000",
         )
 
         for i in range(4):
@@ -652,8 +655,8 @@ class OneTrace(Trace):
             cols=1,
             shared_xaxes=True,
             subplot_titles=titles,
-            vertical_spacing=0,
-        )  # min(0.05, 1 / (self.ndim + supp_plots - 1))
+            vertical_spacing=0.05,
+        )
 
         for w in range(self.nb_walkers):
             fig.add_trace(
@@ -781,58 +784,63 @@ class OneTrace(Trace):
                     col=1,
                 )
 
-        # for d in range(self.nb_dimensions):
-        #     # add best points
-        #     fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
-        #                              y=self.positions.best_position_trace[:, d],
-        #                              mode='markers',
-        #                              marker=dict(color='rgba(252, 196, 25, 1.)',
-        #                                          symbol=0,
-        #                                          size=3),
-        #                              name='Best cost',
-        #                              hovertext=[
-        #                                  f"<b>Walker</b>: "
-        #                                  f"{int(self.positions.best_position_trace[iteration, -2])}<br>"
-        #                                  f"<b>Position</b>: {position:.4f}<br>"
-        #                                  f"<b>Cost</b>: "
-        #                                  f"{self.positions.best_position_trace[iteration, -3]:.4f}<br>"
-        #                                  f"<b>Iteration</b>: {iteration}"
-        #                                 for iteration, position in enumerate(self.positions.best_position_trace[:, d])
-        #                              ],
-        #                              hoverinfo="text",
-        #                              showlegend=d == 0,
-        #                              legendgroup='Best cost'), row=d + 4, col=1)
-        #
-        #     if true_values is not None:
-        #         fig.add_trace(go.Scatter(x=[0, self.nb_iterations - 1],
-        #                                  y=[true_values[d], true_values[d]],
-        #                                  mode='lines',
-        #                                  marker=dict(color='rgba(200, 0, 0, 1)'),
-        #                                  line=dict(dash='dash'),
-        #                                  name='True value',
-        #                                  showlegend=False), row=d + 4, col=1)
-        #
-        #         fig.add_annotation(
-        #             x=self.nb_iterations - 1,
-        #             y=np.max(self.positions.position_trace[:, :, d]),
-        #             xref=f"x{d + 4}",
-        #             yref=f"y{d + 4}",
-        #             text=f"True value : {true_values[d]}",
-        #             showarrow=False,
-        #             borderwidth=0,
-        #             borderpad=4,
-        #             bgcolor="#eb9a9a",
-        #             opacity=0.8
-        #         )
-        #
-        # for i in range(self.nb_dimensions + 1):
-        #     fig.layout.annotations[i].update(x=0.025, xanchor='left')
+                # add best points
+                # fig.add_trace(go.Scatter(x=list(range(self.nb_iterations)),
+                #                          y=self.positions.best_position_trace[:, d],
+                #                          mode='markers',
+                #                          marker=dict(color='rgba(252, 196, 25, 1.)',
+                #                                      symbol=0,
+                #                                      size=3),
+                #                          name='Best cost',
+                #                          hovertext=[
+                #                              f"<b>Walker</b>: "
+                #                              f"{int(self.positions.best_position_trace[iteration, -2])}<br>"
+                #                              f"<b>Position</b>: {position:.4f}<br>"
+                #                              f"<b>Cost</b>: "
+                #                              f"{self.positions.best_position_trace[iteration, -3]:.4f}<br>"
+                #                              f"<b>Iteration</b>: {iteration}"
+                #                             for iteration, position in enumerate(self.positions.best_position_trace[:, d])
+                #                          ],
+                #                          hoverinfo="text",
+                #                          showlegend=d == 0,
+                #                          legendgroup='Best cost'), row=d + 4, col=1)
+
+                if true_values is not None:
+                    fig.add_trace(
+                        go.Scatter(
+                            x=[0, self.nb_iterations],
+                            y=[true_values[d], true_values[d]],
+                            mode="lines",
+                            marker=dict(color="rgba(200, 0, 0, 1)"),
+                            line=dict(dash="dash"),
+                            name="True value",
+                            showlegend=False,
+                        ),
+                        row=d + 4,
+                        col=1,
+                    )
+
+                    fig.add_annotation(
+                        x=self.nb_iterations - 1,
+                        y=np.max(self.positions.position_trace[:, :, d]),
+                        xref=f"x{d + 4}",
+                        yref=f"y{d + 4}",
+                        text=f"True value : {true_values[d]}",
+                        showarrow=False,
+                        borderwidth=0,
+                        borderpad=4,
+                        bgcolor="#eb9a9a",
+                        opacity=0.8,
+                    )
 
         fig["layout"].update(
             height=200 * (self.nb_dimensions + 2),
             width=600,
             margin=dict(t=40, b=10, l=10, r=10),
             xaxis_range=[0, self.nb_iterations - 1],
+            paper_bgcolor="#FFF",
+            plot_bgcolor="#FFF",
+            font_color="#000000",
         )
 
         if show:
@@ -840,36 +848,3 @@ class OneTrace(Trace):
 
         if save is not None:
             fig.write_html(str(save))
-
-    # def plot_acceptance(self):
-    #     accepted_proportions = np.zeros((self.nb_walkers, self.position_counter))
-    #
-    #     for w in range(self.nb_walkers):
-    #         accepted_proportions[w] = np.concatenate((np.array([np.nan for _ in range(self._window_size)]),
-    #                                                   np.convolve(self._accepted[:, w],
-    #                                                               np.ones(self._window_size) / self._window_size,
-    #                                                               mode='valid') * 100))
-    #
-    #         fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-    #                                  y=accepted_proportions[w],
-    #                                  name=f'Walker #{w}',
-    #                                  marker=dict(color='rgba(0, 0, 200, 0.3)'),
-    #                                  hovertext=[f"<b>Walker</b>: {w}<br>"
-    #                                             f"<b>Acceptance percentage</b>: {accepted:.2f}%<br>"
-    #                                             f"<b>Iteration</b>: {iteration}"
-    #                                             for iteration, accepted in enumerate(accepted_proportions[w])],
-    #                                  hoverinfo="text",
-    #                                  showlegend=True), row=4, col=1)
-    #
-    #     mean_acceptance_proportions = np.mean(accepted_proportions, axis=0)
-    #     fig.add_trace(go.Scatter(x=list(range(1, self.position_counter + 1)),
-    #                              y=mean_acceptance_proportions,
-    #                              name='Mean acceptance',
-    #                              marker=dict(color='rgba(33, 33, 99, 1.)'),
-    #                              hovertext=[f"<b>Mean acceptance percentage</b>: {accepted:.2f}%<br>"
-    #                                         f"<b>Iteration</b>: {iteration}"
-    #                                         for iteration, accepted in enumerate(mean_acceptance_proportions)],
-    #                              hoverinfo="text",
-    #                              showlegend=True), row=4, col=1)
-
-    # endregion

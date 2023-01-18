@@ -4,6 +4,23 @@
 
 # ====================================================
 # imports
+from .sequential import Metropolis
+from .sequential import Metropolis1D
+from .sequential import RandomStep
+from .ensemble import Stretch
+from .ensemble import StretchAdaptive
+from .set import SetStep
+from .set import SetStretch
 
 # ====================================================
 # code
+
+__all__ = [
+    "Metropolis",
+    "Metropolis1D",
+    "RandomStep",
+    "Stretch",
+    "StretchAdaptive",
+    "SetStep",
+    "SetStretch",
+]

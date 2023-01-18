@@ -115,7 +115,67 @@ instead of `n`, where `s` is the number of already computed function evaluations
 
 To activate the backup, set the `backup` parameter to `True`.
 
+## Result and Trace
+
+Optimization algorithms return a `Result` object, which contains :
+- a `success` boolean value to indicate if the optimization process was successful.
+- a final `message` string with details on the success.
+- a `Trace` object which stores reached positions at each iteration and provides functions for plotting those positions.
+
+## Example
+
+The following code will demonstrate a basic use case.
+
+First we define a cost function. Here the function take an n-dimension position array and returns a single float cost 
+value. 
+
+```python
+import numpy as np
+import numpy.typing as npt
+
+def cost_function(x: npt.NDArray[np.float64]) -> float:
+    return np.sum(x ** 2) + np.random.normal(0, 3)
+```
+
+![img.png](doc/example/cost_function.png)
+
+Then we run the optimization algorithm : 
+
+```python
+from josiann import sa
+from josiann.moves import Metropolis
+
+x0 = np.array([[np.random.randint(-3, 4),                                   # random number in (-3, 3)
+                np.random.choice(np.linspace(0.5, 5, 10))]])                # random number in (0.5, 5)
+
+res = sa(cost_function,
+         x0,
+         bounds=[(-3, 3), (0.5, 5)],
+         moves=Metropolis(np.array([0.1, 0.1])),
+         max_iter=200,
+         max_measures=1000,
+         T_0=5,
+         seed=42)
+```
+
+Here we selected the Metropolis move, fixed bounds at (-3, 3) for dimension 1 and (0.5, 5) for dimension 2 and drew an 
+initial position within those bounds. Given those bounds, the global minimum is at (0, 0.5).
+The optimization was run for 200 max iterations and with 1000 max function evaluations.
+
+```bash
+T: 0.0026  A: 0.00%%  Best: 1.2325  Current: 1.2325:  93%|█████████▎| 186/200 [00:01<00:00, 169.23iteration/s]
+```
+
+It is then possible to plot the reached positions and associated costs :
+
+```python
+res.trace.plot_positions(true_values=[0, 0.5])
+```
+
+![img.png](doc/example/position_plot.png)
+
 ## References
 
 [^1]: Gutjahr, Walter J., and Georg Ch Pflug. "Simulated annealing for noisy cost functions." Journal of global optimization 8, no. 1 (1996): 1-13.
+
 [^2]: Goodman, Jonathan, and Jonathan Weare. "Ensemble samplers with affine invariance." Communications in applied mathematics and computational science 5, no. 1 (2010): 65-80.
