@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 03/12/2022 17:25
-# Author : matteo
 
 # ====================================================
 # imports
@@ -12,6 +10,7 @@ from attrs import frozen
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.backup.backup import SequentialBackup
 from josiann.moves.base import Move
@@ -24,7 +23,8 @@ from josiann.storage.parameters import check_bounds
 from josiann.sequential.vectorized.compute import get_evaluation_vectorized_mean_cost
 from josiann.sequential.vectorized.compute import get_walker_vectorized_mean_cost
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -47,7 +47,7 @@ class VectorizedSAParameters(SAParameters):
     """
 
     multi: VectorizedMultiParameters
-    fun: jot.VECT_FUN_TYPE
+    fun: jot.VECT_FUN_TYPE[...]
     backup: SequentialBackup
 
 
@@ -121,7 +121,7 @@ def initialize_vsa(
     tol: float,
     moves: Move | Sequence[Move] | Sequence[tuple[float, Move]],
     bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
-    fun: jot.VECT_FUN_TYPE,
+    fun: jot.VECT_FUN_TYPE[...],
     vectorized_on_evaluations: bool,
     vectorized_skip_marker: Any,
     backup: bool,

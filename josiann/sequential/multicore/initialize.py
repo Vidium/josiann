@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 13/01/2023 10:04
-# Author : matteo
 
 # ====================================================
 # imports
@@ -13,6 +11,7 @@ from multiprocessing import cpu_count
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import Move
 from josiann.moves.parse import parse_moves
@@ -25,7 +24,8 @@ from josiann.storage.parameters import check_base_parameters
 from josiann.storage.parameters import MoveParameters
 from josiann.sequential.base.compute import get_mean_cost
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -47,7 +47,7 @@ class MulticoreSAParameters(SAParameters):
     """
 
     multi: MulticoreMultiParameters
-    fun: jot.FUN_TYPE
+    fun: jot.FUN_TYPE[...]
     backup: SequentialBackup
 
 
@@ -94,7 +94,7 @@ def initialize_mcsa(
     tol: float,
     moves: Move | Sequence[Move] | Sequence[tuple[float, Move]],
     bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
-    fun: jot.FUN_TYPE,
+    fun: jot.FUN_TYPE[...],
     backup: bool,
     nb_cores: int,
     timeout: int | None,
@@ -180,10 +180,12 @@ def initialize_mcsa(
     )
 
     # initial costs and last_ns
-    costs = [
-        get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.0))
-        for x_vector in base_parameters.x0
-    ]
+    costs = np.array(
+        [
+            get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.0))
+            for x_vector in base_parameters.x0
+        ]
+    )
 
     last_ns = [1 for _ in range(nb_walkers)]
 

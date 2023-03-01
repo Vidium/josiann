@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "josiann"
+description = "Simulated Annealing for noisy cost functions."
+version = "1.0.1"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+authors = [{name = "Matteo Bouvier"}]
+maintainers = [{name = "Matteo Bouvier", email = "m.bouvier@vidium-solutions.com"}]
+readme = {file = "README.md", content-type="text/x-rst"}
+dependencies = [
+    "numpy",
+    "attrs",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+plot = ["plotly"]
+dev = ["pytest", "pytest-cov", "mypy", "pre-commit"]
+
+[project.urls]
+Source = "https://github.com/Vidium/josiann"
+Home-page = "https://github.com/Vidium/josiann"
+
+[tool.vulture]
+paths = ["josiann", "tests", "vulture_whitelist.py"]

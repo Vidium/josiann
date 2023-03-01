@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 12/01/2023 17:17
-# Author : matteo
 
 # ====================================================
 # imports
@@ -13,10 +11,12 @@ from attrs import frozen
 
 import numpy.typing as npt
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.errors import ShapeError
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================

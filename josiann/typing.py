@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 04/12/2022 10:46
-# Author : matteo
 
 # ====================================================
 # imports
@@ -11,19 +9,30 @@ import numpy as np
 from typing import Union
 from typing import TypeVar
 from typing import Callable
-from typing_extensions import Concatenate
-from typing_extensions import ParamSpec
+from typing import TYPE_CHECKING
 from numpy.typing import NDArray
+
+if TYPE_CHECKING:
+    from typing_extensions import TypeAlias
+    from typing_extensions import Concatenate
+    from typing_extensions import ParamSpec
+    from josiann.parallel import ParallelArgument
 
 
 # ====================================================
 # code
-DType = Union[np.float64, np.int64]
+DType = Union[np.float_, np.int_]
 DT_ARR = TypeVar("DT_ARR", bound=DType)
 
-_P = ParamSpec("_P")
 
-FUN_TYPE = Callable[Concatenate[NDArray[np.float64], _P], float]  # type: ignore[valid-type, misc]
-VECT_FUN_TYPE = Callable[Concatenate[NDArray[np.float64], _P], list[float]]  # type: ignore[valid-type, misc]
+if TYPE_CHECKING:
+    # waiting for mypy to allow Concatenate[NDArray[DType], ...] as we don't care about the other parameters,
+    # for now I have to use a ParamSpec
+    # (https://github.com/python/mypy/issues/14656)
+    _P = ParamSpec("_P")
 
-# SA_UPDATE = tuple[Union[NDArray[np.float64], float], float, bool, int]
+    FUN_TYPE: TypeAlias = Callable[Concatenate[NDArray[DType], _P], float]
+    VECT_FUN_TYPE: TypeAlias = Callable[Concatenate[NDArray[DType], _P], list[float]]
+    PARALLEL_FUN_TYPE: TypeAlias = Callable[
+        Concatenate[ParallelArgument, _P], list[float]
+    ]

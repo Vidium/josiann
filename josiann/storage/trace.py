@@ -6,22 +6,38 @@
 # imports
 from __future__ import annotations
 
+import logging
 import numpy as np
-import plotly.graph_objects as go
 from pathlib import Path
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from plotly.subplots import make_subplots
-
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.errors import ShapeError
 from josiann.storage.parameters import SAParameters
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
+
+logger = logging.getLogger(__name__)
+
+PLOTTING_ENABLED = False
+
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
+except ImportError:
+    logger.info(
+        "Plotly is not installed, consider installing it or running 'pip install josiann[plot]'."
+    )
+
+else:
+    PLOTTING_ENABLED = True
 
 
 # ====================================================
@@ -494,6 +510,9 @@ class Trace(ABC):
             save: optional path to save the plot as a html file.
             show: render the plot ? (default True)
         """
+        if not PLOTTING_ENABLED:
+            raise ImportError("Plotly is not installed.")
+
         titles = ["Temperature", "sigma", "n", "Computation time (s)"]
 
         fig = make_subplots(

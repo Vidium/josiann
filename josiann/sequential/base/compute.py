@@ -1,21 +1,25 @@
 # coding: utf-8
-# Created on 12/01/2023 11:34
-# Author : matteo
-from __future__ import annotations
-
-import numpy.typing as npt
-from typing import Any
-
-import josiann.typing as jot
-
 
 # ====================================================
 # imports
+from __future__ import annotations
+
+import numpy as np
+
+import numpy.typing as npt
+from typing import Any
+from typing import TYPE_CHECKING
+
+from josiann.compute import updated_mean
+
+if TYPE_CHECKING:
+    import josiann.typing as jot
+
 
 # ====================================================
 # code
 def get_mean_cost(
-    fun: jot.FUN_TYPE,
+    fun: jot.FUN_TYPE[...],
     x: npt.NDArray[jot.DType],
     _n: int,
     args: tuple[Any, ...],
@@ -36,7 +40,8 @@ def get_mean_cost(
         The mean of function evaluations at x.
     """
     last_n, last_mean = previous_evaluations
-    return float(
-        last_mean * last_n / _n
-        + sum([max(0.0, fun(x, *args)) for _ in range(_n - last_n)]) / _n
+    return updated_mean(
+        last_n,
+        last_mean,
+        np.array([max(0.0, fun(x, *args)) for _ in range(_n - last_n)]),
     )

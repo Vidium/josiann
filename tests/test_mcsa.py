@@ -4,7 +4,6 @@
 
 # ====================================================
 # imports
-import pytest
 import numpy as np
 
 from typing import Callable
@@ -14,14 +13,13 @@ from josiann import Result
 from josiann.moves.base import Move
 from josiann.moves.ensemble import Stretch
 
-from .test_sa import BOUNDS, cost_function
-
 
 # ====================================================
 # code
 def run_sa(
     move: Move,
     cost_func: Callable,
+    BOUNDS: list[tuple[float, float]],
     nb_walkers: int = 1,
     backup: bool = False,
     max_measures: int = 1000,
@@ -55,27 +53,22 @@ def run_sa(
         seed=seed,
     )
 
-    print(res.message)
-
     assert res.parameters.backup.active == backup, print(res.parameters.backup.active)
 
     return res
 
 
 # multi cores =================================================================
-# REMINDER : this must be launched in terminal as 'python -m pytest tests/test_mcsa.py' to get through the if __name__
-# == '__main__'
-@pytest.mark.multicores
-def test_multicore():
+def test_multicore(BOUNDS, cost_function):
     print("Test parallel")
     res = run_sa(
-        Stretch(bounds=BOUNDS), cost_func=cost_function, nb_walkers=5, nb_cores=5
+        Stretch(bounds=BOUNDS),
+        cost_func=cost_function,
+        nb_walkers=5,
+        nb_cores=5,
+        BOUNDS=BOUNDS,
     )
 
     x = res.trace.positions.get_best().x
 
-    assert np.allclose(x, [0, 0.5], atol=3e-1)
-
-
-if __name__ == "__main__":
-    test_multicore()
+    assert np.allclose(x, [0, 0.5], atol=3e-1), res.message

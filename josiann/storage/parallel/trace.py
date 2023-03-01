@@ -1,15 +1,12 @@
 # coding: utf-8
-# Created on 16/06/2022 18:41
-# Author : matteo
 
 # ====================================================
 # imports
 from __future__ import annotations
 
+import logging
 import numpy as np
-import plotly.graph_objects as go
 from pathlib import Path
-from plotly.subplots import make_subplots
 from tqdm.autonotebook import trange
 
 import numpy.typing as npt
@@ -18,6 +15,22 @@ from typing import Sequence
 
 from josiann.errors import ShapeError
 from josiann.storage.trace import Trace
+
+logger = logging.getLogger(__name__)
+
+PLOTTING_ENABLED = False
+
+try:
+    import plotly.graph_objects as go
+    from plotly.subplots import make_subplots
+
+except ImportError:
+    logger.info(
+        "Plotly is not installed, consider installing it or running 'pip install josiann[plot]'."
+    )
+
+else:
+    PLOTTING_ENABLED = True
 
 
 # ====================================================
@@ -52,6 +65,9 @@ class ParallelTrace(Trace):
             walker_titles: an optional list of sub-plot titles, one title per parallel walker. (default None)
             dimension_titles: an optional list of sub-plot titles, one title per dimension. (default None)
         """
+        if not PLOTTING_ENABLED:
+            raise ImportError("Plotly is not installed.")
+
         if true_values is not None:
             if true_values.ndim != 2:
                 raise ShapeError("The vector of true values should have 2 dimensions.")

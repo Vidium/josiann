@@ -90,7 +90,7 @@ def test_vectorized():
 
     best = res.trace.positions.get_best_all()
 
-    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], best.x
+    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], res.message
 
 
 def test_vectorized_on_walkers():
@@ -108,7 +108,7 @@ def test_vectorized_on_walkers():
 
     best = res.trace.positions.get_best_all()
 
-    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], best.x
+    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], res.message
 
 
 def test_vectorized_on_walkers_and_slots():
@@ -127,7 +127,7 @@ def test_vectorized_on_walkers_and_slots():
 
     best = res.trace.positions.get_best_all()
 
-    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], best.x
+    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], res.message
 
 
 # with backup =================================================================
@@ -144,7 +144,7 @@ def test_backup():
 
     best = res.trace.positions.get_best_all()
 
-    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], best.x
+    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], res.message
 
 
 # multi slots =================================================================
@@ -162,7 +162,7 @@ def test_slots():
 
     best = res.trace.positions.get_best_all()
 
-    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], best.x
+    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], res.message
 
 
 # cost function deterministic =================================================================
@@ -180,4 +180,4 @@ def test_deterministic():
 
     best = res.trace.positions.get_best_all()
 
-    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], best.x
+    assert best.x[0] in [-0.25, 0, 0.25] and best.x[1] in [0.5, 0.75], res.message

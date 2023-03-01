@@ -5,9 +5,11 @@
 # ====================================================
 # imports
 from __future__ import annotations
+from __future__ import annotations
 
 import numpy as np
 
+import numpy.typing as npt
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -91,3 +93,14 @@ def T(k: int, T_0: float, alpha: float) -> float:
         The temperature.
     """
     return T_0 * alpha**k
+
+
+def updated_mean(
+    last_n: int, last_mean: float, new_values: npt.NDArray[np.float_]
+) -> float:
+    """
+    Compute a new mean by integrating new values :
+        last_mean is transformed back to sum > new_values are added > the sum is divided by the new total number of
+        elements
+    """
+    return (last_mean * last_n + float(np.sum(new_values))) / (last_n + len(new_values))

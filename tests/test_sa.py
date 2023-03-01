@@ -22,16 +22,10 @@ from josiann.moves.ensemble import StretchAdaptive
 
 # ====================================================
 # code
-BOUNDS = [(-3, 3), (0.5, 5)]
-
-
-def cost_function(x: np.ndarray) -> float:
-    return np.sum(x**2) + np.random.normal(0, 3)
-
-
 def run_sa(
     move: Move,
     cost_func: Callable,
+    BOUNDS: list[tuple[float, float]],
     nb_walkers: int = 1,
     backup: bool = False,
     max_measures: int = 1000,
@@ -69,34 +63,42 @@ def run_sa(
 
 
 # ONE walker ------------------------------------------------------------------
-def test_RandomStep():
-    res = run_sa(RandomStep(magnitude=5, bounds=BOUNDS), cost_func=cost_function)
-
-    assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
-
-
-def test_Metropolis():
+def test_RandomStep(BOUNDS, cost_function):
     res = run_sa(
-        Metropolis(variances=np.array([0.2, 0.2]), bounds=BOUNDS),
-        cost_func=cost_function,
+        RandomStep(magnitude=5, bounds=BOUNDS), cost_func=cost_function, BOUNDS=BOUNDS
     )
 
     assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
 
 
-def test_Metropolis1D():
-    res = run_sa(Metropolis1D(variance=0.2, bounds=BOUNDS), cost_func=cost_function)
+def test_Metropolis(BOUNDS, cost_function):
+    res = run_sa(
+        Metropolis(variances=np.array([0.2, 0.2]), bounds=BOUNDS),
+        cost_func=cost_function,
+        BOUNDS=BOUNDS,
+    )
 
     assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
 
 
-def test_SetStep():
+def test_Metropolis1D(BOUNDS, cost_function):
+    res = run_sa(
+        Metropolis1D(variance=0.2, bounds=BOUNDS),
+        cost_func=cost_function,
+        BOUNDS=BOUNDS,
+    )
+
+    assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
+
+
+def test_SetStep(BOUNDS, cost_function):
     res = run_sa(
         SetStep(
             position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
             bounds=BOUNDS,
         ),
         cost_func=cost_function,
+        BOUNDS=BOUNDS,
     )
 
     x = res.trace.positions.get_best().x[0]
@@ -105,21 +107,26 @@ def test_SetStep():
 
 
 # MULTIPLE walkers ------------------------------------------------------------
-def test_Stretch():
-    res = run_sa(Stretch(bounds=BOUNDS), cost_func=cost_function, nb_walkers=5)
-
-    assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
-
-
-def test_StretchAdaptive():
+def test_Stretch(BOUNDS, cost_function):
     res = run_sa(
-        StretchAdaptive(a=3, bounds=BOUNDS), cost_func=cost_function, nb_walkers=5
+        Stretch(bounds=BOUNDS), cost_func=cost_function, nb_walkers=5, BOUNDS=BOUNDS
     )
 
     assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
 
 
-def test_SetStretch():
+def test_StretchAdaptive(BOUNDS, cost_function):
+    res = run_sa(
+        StretchAdaptive(a=3, bounds=BOUNDS),
+        cost_func=cost_function,
+        nb_walkers=5,
+        BOUNDS=BOUNDS,
+    )
+
+    assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
+
+
+def test_SetStretch(BOUNDS, cost_function):
     res = run_sa(
         SetStretch(
             position_set=[np.linspace(-3, 3, 25), np.linspace(0.5, 5, 19)],
@@ -127,6 +134,7 @@ def test_SetStretch():
         ),
         cost_func=cost_function,
         nb_walkers=5,
+        BOUNDS=BOUNDS,
     )
 
     x = res.trace.positions.get_best().x

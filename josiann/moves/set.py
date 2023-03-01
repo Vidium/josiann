@@ -11,13 +11,15 @@ from abc import ABC
 
 import numpy.typing as npt
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import Move
 from josiann.moves.base import State
 from josiann.moves.ensemble import Stretch
 from josiann.errors import ShapeError
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================

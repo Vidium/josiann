@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 16/06/2022 09:25
-# Author : matteo
 
 # ====================================================
 # imports
@@ -13,20 +11,20 @@ from warnings import warn
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.parallel.compute import get_vectorized_mean_cost
 from josiann.moves.parallel.base import ParallelMove, parse_moves
 from josiann.backup.parallel.backup import ParallelBackup
 from josiann.storage.parameters import BaseParameters
-from josiann.storage.parameters import (
-    check_base_parameters_core,
-    SAParameters,
-    check_bounds,
-    MoveParameters,
-    MultiParameters,
-)
+from josiann.storage.parameters import check_base_parameters_core
+from josiann.storage.parameters import SAParameters
+from josiann.storage.parameters import check_bounds
+from josiann.storage.parameters import MoveParameters
+from josiann.storage.parameters import MultiParameters
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -37,7 +35,7 @@ class ParallelBaseParameters(BaseParameters):
     Object for storing the general parameters used for running the SA algorithm.
     """
 
-    parallel_args: Sequence[npt.NDArray[Any]] | None
+    parallel_args: tuple[npt.NDArray[Any], ...]
 
     @property
     def nb_parallel_problems(self) -> int:
@@ -141,7 +139,9 @@ def check_base_parameters(
     )
 
     return ParallelBaseParameters(
-        parallel_args=parallel_args,
+        parallel_args=()
+        if parallel_args is None
+        else tuple(arg[:, np.newaxis] for arg in parallel_args),
         args=args,
         x0=x0,
         max_iter=max_iter,
@@ -169,7 +169,7 @@ def initialize_sa(
     tol: float,
     moves: ParallelMove | Sequence[ParallelMove] | Sequence[tuple[float, ParallelMove]],
     bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
-    fun: jot.FUN_TYPE,
+    fun: jot.PARALLEL_FUN_TYPE[...],
     backup: bool,
     suppress_warnings: bool,
     detect_convergence: bool,
@@ -252,7 +252,6 @@ def initialize_sa(
         fun,
         base_parameters.x0,
         1,
-        np.array([False for _ in range(multi_parameters.nb_walkers)]),
         base_parameters.parallel_args,
         base_parameters.args,
         [(0, 0.0) for _ in range(base_parameters.nb_parallel_problems)],

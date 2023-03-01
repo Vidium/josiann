@@ -1,3 +1,3 @@
 #!/bin/bash
 
-python -m pytest -v --cov=josiann ./tests
+python -m pytest -n 10 -v --cov=josiann ./tests

@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 13/01/2023 09:25
-# Author : matteo
 
 # ====================================================
 # imports
@@ -10,13 +8,15 @@ import numpy as np
 
 import numpy.typing as npt
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import State
 from josiann.moves.set import SetMove
 from josiann.moves.parallel.base import ParallelMove
 from josiann.errors import ShapeError
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================

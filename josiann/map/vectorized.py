@@ -1,15 +1,16 @@
 # coding: utf-8
-# Created on 03/12/2022 17:12
-# Author : matteo
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
 from typing import Iterator
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import Move
 from josiann.moves.base import State
@@ -18,7 +19,8 @@ from josiann.compute import acceptance_log_probability
 from josiann.sequential.vectorized.compute import get_evaluation_vectorized_mean_cost
 from josiann.sequential.vectorized.compute import get_walker_vectorized_mean_cost
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -81,7 +83,7 @@ def vectorized_execution(
     last_ns: npt.NDArray[np.int64],
     iteration: int,
     temperature: float,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Iterator[tuple[npt.NDArray[jot.DType], float, bool, int]]:
     """
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
@@ -141,7 +143,7 @@ def vectorized_execution(
         ]
 
         unique_proposed_costs = get_evaluation_vectorized_mean_cost(
-            params.fun,
+            params.fun,  # type: ignore[arg-type]
             unique_proposed_positions,
             current_n,
             params.base.args,
@@ -162,15 +164,13 @@ def vectorized_execution(
             for index in range(len(proposed_positions))
         ]
 
-        proposed_costs = np.array(
-            get_walker_vectorized_mean_cost(
-                params.fun,
-                proposed_positions,
-                current_n,
-                params.base.args,
-                previous_evaluations,
-                kwargs["vectorized_skip_marker"],
-            )
+        proposed_costs = get_walker_vectorized_mean_cost(
+            params.fun,  # type: ignore[arg-type]
+            proposed_positions,
+            current_n,
+            params.base.args,
+            previous_evaluations,
+            kwargs["vectorized_skip_marker"],
         )
 
         for i, cost in enumerate(proposed_costs):

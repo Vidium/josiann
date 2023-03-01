@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 12/01/2023 17:01
-# Author : matteo
 
 # ====================================================
 # imports
@@ -15,6 +13,7 @@ from multiprocessing import cpu_count
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import Move
 from josiann.moves.sequential import RandomStep
@@ -24,13 +23,14 @@ from josiann.storage.trace import OneTrace
 from josiann.sequential.multicore.initialize import initialize_mcsa
 from josiann.map.multicore import multicore_execution
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
 # code
 def mcsa(
-    fun: jot.FUN_TYPE,
+    fun: jot.FUN_TYPE[...],
     x0: npt.NDArray[Any],
     args: tuple[Any, ...] | None = None,
     bounds: Sequence[tuple[float, float]] | None = None,

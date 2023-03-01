@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 16/06/2022 14:50
-# Author : matteo
 
 # ====================================================
 # imports
@@ -10,29 +8,29 @@ import numpy as np
 
 import numpy.typing as npt
 from typing import Any
-from typing import cast
-from typing import Iterable
 from typing import Iterator
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.compute import acceptance_log_probability
 from josiann.parallel.compute import get_vectorized_mean_cost
 from josiann.moves.parallel.base import ParallelMove
 from josiann.backup.parallel.backup import ParallelBackup
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
 # code
 def _vectorized_update_walker(
-    fun: jot.VECT_FUN_TYPE,
+    fun: jot.VECT_FUN_TYPE[...],
     x: npt.NDArray[jot.DType],
     converged: npt.NDArray[np.bool_],
     costs: Sequence[float],
     current_n: int,
     last_ns: Sequence[int],
-    parallel_args: Sequence[npt.NDArray[Any]] | None,
+    parallel_args: tuple[npt.NDArray[Any]],
     args: tuple[Any, ...],
     list_moves: list[ParallelMove],
     list_probabilities: list[float],
@@ -71,7 +69,6 @@ def _vectorized_update_walker(
         fun,
         proposed_positions,
         current_n,
-        converged,
         parallel_args,
         args,
         previous_evaluations,
@@ -105,15 +102,19 @@ def _vectorized_update_walker(
 
 
 def vectorized_execution(
-    fun: jot.VECT_FUN_TYPE, *iterables: Iterable[Any], **kwargs: Any
+    fun: jot.VECT_FUN_TYPE[...],
+    x: npt.NDArray[jot.DType],
+    converged: npt.NDArray[np.bool_],
+    **kwargs: Any,
 ) -> Iterator[tuple[npt.NDArray[jot.DType] | float, float, bool, int]]:
     """
-    Vectorized executor for calling <fn> with all parameters defined in <iterables> at once. This requires <fn> to be
+    Vectorized executor for calling <fn> on all position vectors in <x> at once. This requires <fn> to be
     a vectorized function.
 
     Args:
         fun: a vectorized function to evaluate.
-        *iterables: a sequence of iterables to pass to <fun>.
+        x: position vectors.
+        converged: array of booleans values indicating if a problem as already converged.
         **kwargs: additional parameters.
 
     Returns:
@@ -121,8 +122,8 @@ def vectorized_execution(
     """
     return _vectorized_update_walker(
         fun,
-        x=cast(npt.NDArray[jot.DType], iterables[0]),
-        converged=cast(npt.NDArray[np.bool_], iterables[1]),
+        x=x,
+        converged=converged,
         costs=kwargs["costs"],
         current_n=kwargs["current_n"],
         last_ns=kwargs["last_ns"],

@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 03/12/2022 17:25
-# Author : matteo
 
 # ====================================================
 # imports
@@ -12,6 +10,7 @@ from attrs import frozen
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.backup.backup import SequentialBackup
 from josiann.sequential.base.compute import get_mean_cost
@@ -23,7 +22,8 @@ from josiann.storage.parameters import SAParameters
 from josiann.storage.parameters import check_base_parameters
 from josiann.storage.parameters import check_bounds
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -34,7 +34,7 @@ class SequentialSAParameters(SAParameters):
     Object for storing the parameters used for running the SA algorithm.
     """
 
-    fun: jot.FUN_TYPE
+    fun: jot.FUN_TYPE[...]
     backup: SequentialBackup
 
 
@@ -50,7 +50,7 @@ def initialize_sa(
     tol: float,
     moves: Move | Sequence[Move] | Sequence[tuple[float, Move]],
     bounds: tuple[float, float] | Sequence[tuple[float, float]] | None,
-    fun: jot.FUN_TYPE,
+    fun: jot.FUN_TYPE[...],
     backup: bool,
     suppress_warnings: bool,
     detect_convergence: bool,
@@ -128,10 +128,12 @@ def initialize_sa(
     backup_storage = SequentialBackup(active=move_parameters.using_SetMoves and backup)
 
     # initial costs and last_ns
-    costs = [
-        get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.0))
-        for x_vector in base_parameters.x0
-    ]
+    costs = np.array(
+        [
+            get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.0))
+            for x_vector in base_parameters.x0
+        ]
+    )
 
     last_ns = [1 for _ in range(nb_walkers)]
 

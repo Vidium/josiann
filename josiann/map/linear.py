@@ -4,17 +4,21 @@
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 from itertools import repeat
 
 import numpy.typing as npt
 from typing import Any
 from typing import Iterator
+from typing import TYPE_CHECKING
 
 from josiann.map.utils import _update_walker
 from josiann.storage.parameters import SAParameters
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -27,7 +31,7 @@ def linear_execution(
     last_ns: npt.NDArray[np.int64],
     iteration: int,
     temperature: float,
-    **kwargs: Any
+    **kwargs: Any,
 ) -> Iterator[tuple[npt.NDArray[jot.DType], float, bool, int]]:
     """
     Linear executor for calling <fn> with parameters passed in <iterables> in a linear fashion.

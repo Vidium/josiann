@@ -1,21 +1,15 @@
 # coding: utf-8
-# Created on 03/08/2021 12:21
-# Author : matteo
-
-"""
-Defines executors for updating the position vectors by calling moves and computing the costs:
-    LinearExecutor: sequential updates
-    VectorizedExecutor: updates all at once in matrix of positions
-    ParallelExecutor: parallel updates
-"""
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 from typing import Any
 
 import numpy as np
 
 from numpy.typing import NDArray
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import Move
 from josiann.moves.base import State
@@ -23,13 +17,14 @@ from josiann.backup.backup import SequentialBackup
 from josiann.sequential.base.compute import get_mean_cost
 from josiann.compute import acceptance_log_probability
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
 # code
 def _update_walker(
-    fun: jot.FUN_TYPE,
+    fun: jot.FUN_TYPE[...],
     x: NDArray[jot.DType],
     cost: float,
     current_n: int,

@@ -1,4 +1,4 @@
-fail_fast: false
+fail_fast: true
 
 repos:
   - repo: https://github.com/ambv/black
@@ -6,6 +6,15 @@ repos:
     hooks:
       - id: black
         language_version: python3.9
+        exclude: ^build/
+
+  - repo: https://github.com/jendrikseipp/vulture
+    rev: v2.7
+    hooks:
+      - id: vulture
+        types: [python]
+        pass_filenames: false
+        require_serial: true
 
   - repo: https://github.com/pycqa/pylint
     rev: v2.15.8
@@ -15,13 +24,13 @@ repos:
         language_version: python3.9
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v0.991
+    rev: v1.0.1
     hooks:
       - id: mypy
-        exclude: (^tests/)|(^doc/)
+        exclude: (^tests/)|(^doc/)|(^build/)
         args: [--strict]
         additional_dependencies:
-          - "numpy==1.24.1"
+          - "numpy==1.24"
           - "attrs==22.2.0"
           - "types-attrs==19.1.0"
         language_version: python3.9

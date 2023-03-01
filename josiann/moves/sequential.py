@@ -1,12 +1,4 @@
 # coding: utf-8
-# Created on 29/07/2021 09:30
-# Author : matteo
-
-"""
-Defines Moves for updating the position vectors.
-Moves can be walker-independent, where each walker is updated without information about other walkers,
-or walker-dependent.
-"""
 
 # ====================================================
 # imports
@@ -15,11 +7,13 @@ from __future__ import annotations
 import numpy as np
 
 import numpy.typing as npt
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import Move
 from josiann.moves.base import State
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================

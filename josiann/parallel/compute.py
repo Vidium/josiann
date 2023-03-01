@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 16/06/2022 11:43
-# Author : matteo
 
 # ====================================================
 # imports
@@ -10,30 +8,32 @@ import numpy as np
 
 import numpy.typing as npt
 from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING
 
-import josiann.typing as jot
+from josiann.compute import updated_mean
+from josiann.parallel import ParallelArgument
+
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
 # code
 def get_vectorized_mean_cost(
-    fun: jot.VECT_FUN_TYPE,
+    fun: jot.PARALLEL_FUN_TYPE[...],
     x: npt.NDArray[np.float64 | np.int64],
-    _n: int,
-    converged: npt.NDArray[np.bool_],
-    parallel_args: Sequence[npt.NDArray[Any]] | None,
+    n: int,
+    parallel_args: tuple[npt.NDArray[Any], ...],
     args: tuple[Any, ...],
     previous_evaluations: list[tuple[int, float]],
-) -> list[float]:
+) -> npt.NDArray[np.float_]:
     """
     Get the mean of <n> function evaluations for vectors of values <x>.
 
     Args:
         fun: a vectorized function to evaluate.
         x: a matrix of position vectors of shape (nb_parallel_problems, d).
-        _n: the number of evaluations to compute.
-        converged: a vector indicating which walkers have already converged.
+        n: the number of evaluations to compute.
         parallel_args: an optional sequence of arrays (of size equal to the number of parallel problems) of arguments
             to pass to the vectorized function to minimize. Parallel arguments are passed before other arguments.
         args: arguments to be passed to <fun>.
@@ -43,34 +43,19 @@ def get_vectorized_mean_cost(
     Returns:
         The mean of function evaluations at x.
     """
-    # TODO : is it possible to switch to median ?
+    remaining_ns = n - np.array([last_n for last_n, _ in previous_evaluations])
 
-    remaining_ns = _n - np.array([last_n for last_n, _ in previous_evaluations])
-
-    all_x = np.repeat(x, remaining_ns, axis=0)
-
-    all_parallel_args = (
-        ()
-        if parallel_args is None
-        else [np.repeat(arg[~converged], remaining_ns) for arg in parallel_args]
+    arguments = ParallelArgument(
+        positions=x, nb_evaluations=remaining_ns, args=parallel_args
     )
 
-    all_evaluations = fun(all_x, converged, *all_parallel_args, *args)
+    fun(arguments, *args)
 
-    evaluations = []
-    evaluation_index_start = 0
-    for last_n, last_mean in previous_evaluations:
-        if _n - last_n:
-            evaluation_index_stop = evaluation_index_start + _n - last_n
-            evaluations.append(
-                last_mean * last_n / _n
-                + sum(all_evaluations[evaluation_index_start:evaluation_index_stop])
-                / _n
+    return np.array(
+        [
+            updated_mean(last_n, last_mean, res)
+            for res, (last_n, last_mean) in zip(
+                arguments.result_iter(), previous_evaluations
             )
-
-            evaluation_index_start = evaluation_index_stop
-
-        else:
-            evaluations.append(last_mean)
-
-    return evaluations
+        ]
+    )

@@ -16,13 +16,15 @@ from warnings import warn
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.errors import ShapeError
 from josiann.moves.base import Move
 from josiann.moves.set import SetMove
 from josiann.backup.backup import Backup
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -116,9 +118,9 @@ class SAParameters(ABC):
     base: BaseParameters
     multi: MultiParameters
     moves: MoveParameters
-    fun: jot.FUN_TYPE | jot.VECT_FUN_TYPE
+    fun: jot.FUN_TYPE[...] | jot.VECT_FUN_TYPE[...] | jot.PARALLEL_FUN_TYPE[...]
     backup: Backup[Any]
-    costs: list[float]
+    costs: npt.NDArray[np.float_]
     last_ns: list[int]
     window_size: int
     seed: int

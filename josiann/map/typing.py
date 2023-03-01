@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 13/01/2023 10:32
-# Author : matteo
 
 # ====================================================
 # imports
@@ -12,10 +10,12 @@ import numpy.typing as npt
 from typing import Any
 from typing import Protocol
 from typing import Iterator
+from typing import TYPE_CHECKING
 
 from josiann.storage.parameters import SAParameters
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================

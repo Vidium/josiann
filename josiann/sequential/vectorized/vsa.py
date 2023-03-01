@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 03/12/2022 13:31
-# Author : matteo
 
 # ====================================================
 # imports
@@ -14,6 +12,7 @@ from tqdm.autonotebook import trange
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.moves.base import Move
 from josiann.moves.sequential import RandomStep
@@ -23,13 +22,14 @@ from josiann.storage.result import Result
 from josiann.storage.trace import OneTrace
 from josiann.sequential.vectorized.intialize import initialize_vsa
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
 # code
 def vsa(
-    fun: jot.VECT_FUN_TYPE,
+    fun: jot.VECT_FUN_TYPE[...],
     x0: npt.NDArray[Any],
     args: tuple[Any, ...] | None = None,
     bounds: Sequence[tuple[float, float]] | None = None,

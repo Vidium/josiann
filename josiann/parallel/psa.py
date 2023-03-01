@@ -1,6 +1,4 @@
 # coding: utf-8
-# Created on 15/06/2022 17:14
-# Author : matteo
 
 # ====================================================
 # imports
@@ -15,6 +13,7 @@ from tqdm.autonotebook import trange
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
+from typing import TYPE_CHECKING
 
 from josiann.compute import n, T, sigma
 from josiann.parallel.mappers import vectorized_execution
@@ -24,13 +23,14 @@ from josiann.storage.result import Result
 from josiann.moves.parallel.base import ParallelMove
 from josiann.moves.parallel.set import ParallelSetStep
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
 # code
 def psa(
-    fun: jot.VECT_FUN_TYPE,
+    fun: jot.VECT_FUN_TYPE[...],
     x0: npt.NDArray[Any],
     parallel_args: Sequence[npt.NDArray[Any]] | None = None,
     args: tuple[Any, ...] | None = None,
@@ -159,7 +159,7 @@ def psa(
 
         try:
             updates = vectorized_execution(
-                params.fun,
+                params.fun,  # type: ignore[arg-type]
                 x.copy(),
                 trace.positions.converged,
                 costs=costs,

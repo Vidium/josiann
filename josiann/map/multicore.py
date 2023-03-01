@@ -1,9 +1,9 @@
 # coding: utf-8
-# Created on 13/01/2023 10:22
-# Author : matteo
 
 # ====================================================
 # imports
+from __future__ import annotations
+
 import numpy as np
 from itertools import repeat
 from concurrent.futures import ProcessPoolExecutor
@@ -11,12 +11,14 @@ from concurrent.futures import ProcessPoolExecutor
 import numpy.typing as npt
 from typing import Any
 from typing import Iterator
+from typing import TYPE_CHECKING
 
 from josiann.map.typing import Execution
 from josiann.map.utils import _update_walker
 from josiann.storage.parameters import SAParameters
 
-import josiann.typing as jot
+if TYPE_CHECKING:
+    import josiann.typing as jot
 
 
 # ====================================================
@@ -42,7 +44,7 @@ def multicore_execution(max_workers: int) -> Execution:
         last_ns: npt.NDArray[np.int64],
         iteration: int,
         temperature: float,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> Iterator[tuple[npt.NDArray[jot.DType], float, bool, int]]:
         """
         Executor for calling <fn> in parallel on multiple cores.
