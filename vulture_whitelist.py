@@ -1,0 +1,8 @@
+_.where_evaluations  # unused property (josiann/parallel/arguments.py:32)
+restart  # unused function (josiann/run.py:141)
+previous  # unused variable (josiann/run.py:142)
+_.plot_positions  # unused method (josiann/storage/parallel/trace.py:50)
+_.get_best_all  # unused method (josiann/storage/trace.py:301)
+_.plot_positions  # unused method (josiann/storage/trace.py:482)
+_.plot_parameters  # unused method (josiann/storage/trace.py:503)
+_.plot_positions  # unused method (josiann/storage/trace.py:635)
