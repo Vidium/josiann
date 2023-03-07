@@ -5,11 +5,14 @@
 from __future__ import annotations
 
 import numpy as np
+from enum import Enum
+from enum import auto
 
 import numpy.typing as npt
 from typing import Any
 from typing import Iterator
 from typing import Sequence
+from typing import Generator
 from typing import TYPE_CHECKING
 
 from josiann.compute import acceptance_log_probability
@@ -23,6 +26,12 @@ if TYPE_CHECKING:
 
 # ====================================================
 # code
+class UpdateState(Enum):
+    accepted = auto()
+    rejected = auto()
+    converged = auto()
+
+
 def _vectorized_update_walker(
     fun: jot.VECT_FUN_TYPE[...],
     x: npt.NDArray[jot.DType],
@@ -36,7 +45,7 @@ def _vectorized_update_walker(
     list_probabilities: list[float],
     temperature: float,
     backup_storage: ParallelBackup,
-) -> Iterator[tuple[npt.NDArray[jot.DType] | float, float, bool, int]]:
+) -> Generator[tuple[npt.NDArray[jot.DType] | float, float, UpdateState], None, None]:
     """
     Update the positions of a set of walkers using a vectorized cost function, by picking a move in the list of
     available moves and accepting the proposed new position based on the new cost.
@@ -61,9 +70,16 @@ def _vectorized_update_walker(
     """
     # generate a new proposal as a neighbor of x and get its cost
     move = np.random.choice(list_moves, p=list_probabilities)  # type: ignore[arg-type]
-    proposed_positions = move.get_proposal(x[~converged], None)
 
-    previous_evaluations = backup_storage.get_previous_evaluations(proposed_positions)
+    proposed_positions = np.zeros_like(x)
+    proposed_positions[~converged] = move.get_proposal(x[~converged], None)
+
+    previous_evaluations = [
+        (current_n, 0.0) if converged[i] else p
+        for i, p in enumerate(
+            backup_storage.get_previous_evaluations(proposed_positions)
+        )
+    ]
 
     proposed_costs = get_vectorized_mean_cost(
         fun,
@@ -75,30 +91,24 @@ def _vectorized_update_walker(
     )
 
     backup_storage.save(
-        proposed_positions, [(current_n, cost) for cost in proposed_costs]
+        proposed_positions[~converged],
+        [(current_n, cost) for cost in proposed_costs[~converged]],
     )
 
-    evaluation_index = 0
-
-    for index, has_converged in enumerate(converged):
+    for has_converged, cost, last_n, proposed_cost, proposed_position in zip(
+        converged, costs, last_ns, proposed_costs, proposed_positions
+    ):
         if has_converged:
-            yield np.nan, np.nan, True, index
+            yield np.nan, np.nan, UpdateState.converged
 
         else:
-            position = proposed_positions[evaluation_index]
-            proposed_cost = proposed_costs[evaluation_index]
-
-            evaluation_index += 1
-
             if acceptance_log_probability(
-                costs[index] * current_n / last_ns[index], proposed_cost, temperature
+                cost * current_n / last_n, proposed_cost, temperature
             ) > np.log(np.random.random()):
-                accepted = True
+                yield proposed_position, proposed_cost, UpdateState.accepted
 
             else:
-                accepted = False
-
-            yield position, proposed_cost, accepted, index
+                yield proposed_position, proposed_cost, UpdateState.rejected
 
 
 def vectorized_execution(
@@ -106,7 +116,7 @@ def vectorized_execution(
     x: npt.NDArray[jot.DType],
     converged: npt.NDArray[np.bool_],
     **kwargs: Any,
-) -> Iterator[tuple[npt.NDArray[jot.DType] | float, float, bool, int]]:
+) -> Iterator[tuple[npt.NDArray[jot.DType] | float, float, UpdateState]]:
     """
     Vectorized executor for calling <fn> on all position vectors in <x> at once. This requires <fn> to be
     a vectorized function.

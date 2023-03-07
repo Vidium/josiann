@@ -16,6 +16,7 @@ from typing import Sequence
 from typing import TYPE_CHECKING
 
 from josiann.compute import n, T, sigma
+from josiann.parallel.mappers import UpdateState
 from josiann.parallel.mappers import vectorized_execution
 from josiann.storage.parallel.parameters import initialize_sa
 from josiann.storage.parallel.trace import ParallelTrace
@@ -174,16 +175,17 @@ def psa(
                 backup=params.backup,
             )
 
-            for _x, _cost, _accepted, _walker_index in updates:
-                if _accepted:
+            for _walker_index, (_x, _cost, _state) in enumerate(updates):
+                if _state is UpdateState.accepted:
                     # update positions, costs, n
                     x[_walker_index] = _x
                     costs[_walker_index] = _cost
                     last_ns[_walker_index] = current_n
 
-                accepted[_walker_index] = _accepted
-                explored[_walker_index] = _x
-                explored_costs[_walker_index] = _cost
+                if _state in (UpdateState.accepted, UpdateState.rejected):
+                    accepted[_walker_index] = _state is UpdateState.accepted
+                    explored[_walker_index] = _x
+                    explored_costs[_walker_index] = _cost
 
         except Exception:
             message = (
