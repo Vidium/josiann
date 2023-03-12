@@ -1,8 +1,4 @@
-<img style="float: left; max-height: 100px;" src="docs/source/_static/images/logo_dark.png">
-
 # Josiann: Just anOther SImulated ANNealing
-
-<br/>
 
 Josiann is a Python library which implements the simulated annealing algorithm for noisy cost functions. It has
 support for vectorized functions, multiprocessing and provides a parallel mode for optimizing several similar but

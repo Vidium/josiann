@@ -9,7 +9,10 @@ This package provides an implementation of the simulated annealing method for mi
 
 # ====================================================
 # imports
-from importlib import metadata
+try:
+    from importlib import metadata
+except ImportError:  # for Python<3.8
+    import importlib_metadata as metadata  # type: ignore[import, no-redef]
 
 from josiann.algorithms.sequential.base.sa import sa
 from josiann.algorithms.sequential.vectorized.vsa import vsa
