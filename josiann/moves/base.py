@@ -10,13 +10,13 @@ from abc import abstractmethod
 from attrs import frozen
 
 import numpy.typing as npt
+from typing import Any
+from typing import Union
 from typing import Sequence
-from typing import TYPE_CHECKING
+from typing import Optional
 
+import josiann.typing as jot
 from josiann.errors import ShapeError
-
-if TYPE_CHECKING:
-    import josiann.typing as jot
 
 
 # ====================================================
@@ -26,30 +26,64 @@ class State:
     """
     Object for describing the current state of the SA algorithm.
 
-    complementary_set: set of complementary vectors x_[k] of shape (nb_walkers-1, ndim)
-    iteration: current iteration number.
-    max_iter: maximum iteration number.
+    Args:
+        complementary_set: matrix of position vectors from walkers other than the one to update.
+        iteration: current iteration number.
+        max_iter: maximum iteration number.
     """
 
-    complementary_set: npt.NDArray[jot.DType]
-    iteration: int
-    max_iter: int
+    complementary_set: npt.NDArray[
+        jot.DType
+    ]  #: matrix of position vectors from walkers other than the one to update.
+    iteration: int  #: current iteration number.
+    max_iter: int  #: maximum iteration number.
 
 
 class Move(ABC):
     """
     Base abstract class for defining how positions evolve in the SA algorithm.
-
-    Args:
-        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, bounds: npt.NDArray[jot.DType] | None = None):
-        self._bounds = bounds
+    # region magic methods
+    def __init__(
+        self,
+        *,
+        bounds: Optional[npt.NDArray[jot.DType]] = None,
+        repr_attributes: tuple[str, ...] = (),
+        **kwargs: Any,
+    ):
+        """
+        Instantiate a Move.
 
+        Args:
+            bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+            repr_attributes: list of attribute names to include in the string representation of this Move.
+        """
+        self._bounds = bounds
+        self._repr_attributes = tuple(repr_attributes)
+
+    def __repr__(self) -> str:
+        with np.printoptions(precision=4):
+            repr_str = (
+                f"[Move] {type(self).__name__}("
+                f"{', '.join([str(getattr(self, attr_name)) for attr_name in self._repr_attributes])}"
+                f")"
+            )
+
+        return repr_str
+
+    # endregion
+
+    # region methods
     def set_bounds(
-        self, bounds: tuple[float, float] | Sequence[tuple[float, float]] | None
+        self, bounds: Union[tuple[float, float], Sequence[tuple[float, float]], None]
     ) -> None:
+        """
+        Set bounds for the move.
+
+        Args:
+            bounds: sequence of (min, max) bounds for values to propose in each dimension.
+        """
         if bounds is not None:
             bounds_arr = np.array(bounds)
 
@@ -95,7 +129,7 @@ class Move(ABC):
         Get valid proposal within defined bounds.
 
         Args:
-            a 'raw' proposal.
+            x: a 'raw' proposal.
 
         Returns
             A proposal with values restricted with the defined bounds.
@@ -104,3 +138,5 @@ class Move(ABC):
             return np.minimum(np.maximum(x, self._bounds[:, 0]), self._bounds[:, 1])
 
         return x
+
+    # endregion

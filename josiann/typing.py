@@ -4,7 +4,7 @@
 # imports
 from __future__ import annotations
 
-import numpy as np
+import numpy
 
 from typing import Union
 from typing import TypeVar
@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 
 # ====================================================
 # code
-DType = Union[np.float_, np.int_]
+DType: TypeAlias = Union[numpy.float64, numpy.int64]
 DT_ARR = TypeVar("DT_ARR", bound=DType)
 
 
@@ -33,6 +33,4 @@ if TYPE_CHECKING:
 
     FUN_TYPE: TypeAlias = Callable[Concatenate[NDArray[DType], _P], float]
     VECT_FUN_TYPE: TypeAlias = Callable[Concatenate[NDArray[DType], _P], list[float]]
-    PARALLEL_FUN_TYPE: TypeAlias = Callable[
-        Concatenate[ParallelArgument, _P], list[float]
-    ]
+    PARALLEL_FUN_TYPE: TypeAlias = Callable[Concatenate[ParallelArgument, _P], None]

@@ -15,14 +15,16 @@ from abc import ABC
 from abc import abstractmethod
 
 import numpy.typing as npt
+from typing import List
+from typing import Tuple
 from typing import Generic
 from typing import TypeVar
 
 
 # ====================================================
 # code
-EVALUATION = tuple[int, float]
-EV = TypeVar("EV", EVALUATION, list[EVALUATION])
+EVALUATION = Tuple[int, float]
+EV = TypeVar("EV", EVALUATION, List[EVALUATION])
 
 
 class Backup(ABC, Generic[EV]):

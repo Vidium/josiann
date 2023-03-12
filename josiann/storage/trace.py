@@ -15,13 +15,10 @@ from dataclasses import dataclass
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
-from typing import TYPE_CHECKING
 
+import josiann.typing as jot
 from josiann.errors import ShapeError
 from josiann.storage.parameters import SAParameters
-
-if TYPE_CHECKING:
-    import josiann.typing as jot
 
 logger = logging.getLogger(__name__)
 
@@ -434,10 +431,12 @@ class Trace(ABC):
         initial_cost: npt.NDArray[np.float64],
     ):
         """
+        Instantiate a Trace.
+
         Args:
             nb_iterations: number of expected iterations for the SA algorithm.
-            nb_walkers: number of walkers in parallel.
-            nb_dimensions: number of dimensions per problem.
+            nb_walkers: number of walkers that run in parallel.
+            nb_dimensions: number of dimensions per optimization problem.
             run_parameters: parameters used for running the SA algorithm.
             initial_position: initial positions before running the SA algorithm.
             initial_cost: cost of initial positions.
@@ -462,20 +461,32 @@ class Trace(ABC):
     # region attributes
     @property
     def nb_walkers(self) -> int:
+        """Number of walkers that run in parallel."""
         return self.positions.nb_walkers
 
     @property
     def nb_dimensions(self) -> int:
+        """Number of dimensions per optimization problem."""
         return self.positions.nb_dimensions
 
     @property
     def nb_iterations(self) -> int:
+        """Number of iterations that the SA algorithm run for."""
         return self.positions.nb_iterations
 
     # endregion
 
     # region methods
     def finalize(self, iteration: int) -> None:
+        """
+        When the SA algorithm terminates, finalize() is called on position and parameter traces to delete rows for
+        iterations that where never run.
+
+        Args:
+            iteration: final iteration that was computed before termination.
+
+        :meta private:
+        """
         self.positions.finalize(iteration)
         self.parameters.finalize(iteration)
 
@@ -494,9 +505,9 @@ class Trace(ABC):
         Args:
             save: optional path to save the plot as a html file.
             true_values: an optional sequence of known true values for each dimension of the vector to optimize.
-            show: render the plot ? (default True)
-            walker_titles: an optional list of sub-plot titles, one title per parallel walker. (default None)
-            dimension_titles: an optional list of sub-plot titles, one title per dimension. (defualt None)
+            show: render the plot ?
+            walker_titles: an optional list of sub-plot titles, one title per parallel walker.
+            dimension_titles: an optional list of sub-plot titles, one title per dimension.
         """
         pass
 
@@ -508,7 +519,7 @@ class Trace(ABC):
 
         Args:
             save: optional path to save the plot as a html file.
-            show: render the plot ? (default True)
+            show: render the plot ?
         """
         if not PLOTTING_ENABLED:
             raise ImportError("Plotly is not installed.")
@@ -867,3 +878,5 @@ class OneTrace(Trace):
 
         if save is not None:
             fig.write_html(str(save))
+
+    # endregion

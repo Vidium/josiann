@@ -2,6 +2,8 @@
 # Created on 13/01/2023 09:16
 # Author : matteo
 
+"""Move functions that use multiple walkers to better solve some types of problems."""
+
 # ====================================================
 # imports
 from __future__ import annotations
@@ -10,13 +12,12 @@ import numpy as np
 from abc import ABC
 
 import numpy.typing as npt
-from typing import TYPE_CHECKING
+from typing import Any
+from typing import Optional
 
+import josiann.typing as jot
 from josiann.moves.base import Move
 from josiann.moves.base import State
-
-if TYPE_CHECKING:
-    import josiann.typing as jot
 
 
 # ====================================================
@@ -30,17 +31,36 @@ class EnsembleMove(Move, ABC):
 class Stretch(EnsembleMove):
     """
     Stretch move as defined in 'Goodman, J., Weare, J., 2010, Comm. App. Math. and Comp. Sci., 5, 65'
-
-    Args:
-        a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
-            while bigger values make samples more spread out with a peak getting closer to 0.
-        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, a: float = 2.0, bounds: npt.NDArray[np.float64] | None = None):
-        super().__init__(bounds=bounds)
+    # region magic methods
+    def __init__(
+        self,
+        *,
+        a: float = 2.0,
+        bounds: Optional[npt.NDArray[jot.DType]] = None,
+        repr_attributes: tuple[str, ...] = (),
+        **kwargs: Any,
+    ):
+        """
+        Instantiate a Move.
+
+        Args:
+            position_set: sets of only possible values for x in each dimension.
+            a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
+                while bigger values make samples more spread out with a peak getting closer to 0.
+            bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
+            repr_attributes: tuple of attribute names to include in the move's representation.
+        """
+        super().__init__(
+            bounds=bounds, repr_attributes=("_a",) + repr_attributes, **kwargs
+        )
+
         self._a = a
 
+    # endregion
+
+    # region methods
     @staticmethod
     def _sample_z(a: float) -> float:
         """
@@ -78,21 +98,16 @@ class Stretch(EnsembleMove):
         # move
         return x_j + z * (x - x_j)  # type: ignore[no-any-return]
 
+    # endregion
+
 
 class StretchAdaptive(Stretch):
     """
     Stretch move as defined in 'Goodman, J., Weare, J., 2010, Comm. App. Math. and Comp. Sci., 5, 65' with decreasing
     'a' parameter.
-
-    Args:
-        a: parameter for tuning the distribution of Z. Smaller values make samples tightly distributed around 1
-            while bigger values make samples more spread out with a peak getting closer to 0.
-        bounds: optional sequence of (min, max) bounds for values to propose in each dimension.
     """
 
-    def __init__(self, a: float = 2.0, bounds: npt.NDArray[np.float64] | None = None):
-        super().__init__(a=a, bounds=bounds)
-
+    # region methods
     def _get_proposal(
         self, x: npt.NDArray[jot.DT_ARR], state: State
     ) -> npt.NDArray[jot.DT_ARR]:
@@ -116,3 +131,5 @@ class StretchAdaptive(Stretch):
         z = self._sample_z(a)
         # move
         return x_j + z * (x - x_j)  # type: ignore[no-any-return]
+
+    # endregion

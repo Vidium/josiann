@@ -9,6 +9,7 @@ from __future__ import annotations
 import numpy as np
 
 import numpy.typing as npt
+from typing import List
 
 from josiann.backup.backup import Backup
 from josiann.backup.backup import EVALUATION
@@ -16,7 +17,7 @@ from josiann.backup.backup import EVALUATION
 
 # ====================================================
 # code
-class ParallelBackup(Backup[list[EVALUATION]]):
+class ParallelBackup(Backup[List[EVALUATION]]):
     """
     Object for storing previously computed function evaluations at given position vectors. This is only available
         when using SetStep moves since they offer a decent probability of hitting the exact same position vector

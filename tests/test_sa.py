@@ -14,8 +14,8 @@ from josiann.moves.base import Move
 from josiann.moves.sequential import RandomStep
 from josiann.moves.sequential import Metropolis
 from josiann.moves.sequential import Metropolis1D
-from josiann.moves.set import SetStep
-from josiann.moves.set import SetStretch
+from josiann.moves.discrete import SetStep
+from josiann.moves.discrete import SetStretch
 from josiann.moves.ensemble import Stretch
 from josiann.moves.ensemble import StretchAdaptive
 

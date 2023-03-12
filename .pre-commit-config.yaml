@@ -27,7 +27,7 @@ repos:
     rev: v1.0.1
     hooks:
       - id: mypy
-        exclude: (^tests/)|(^doc/)|(^build/)|(vulture_whitelist.py)
+        exclude: (^tests/)|(^docs/)|(^build/)|(vulture_whitelist.py)
         args: [--strict]
         additional_dependencies:
           - "numpy==1.24"

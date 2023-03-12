@@ -6,3 +6,4 @@ build/
 josiann.egg-info/
 .coverage
 venv_josiann/*
+dist/

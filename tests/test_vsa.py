@@ -14,7 +14,7 @@ from typing import Callable
 from josiann import Result
 from josiann import vsa
 from josiann.moves.base import Move
-from josiann.moves.set import SetStep
+from josiann.moves.discrete import SetStep
 
 # ====================================================
 # code

@@ -6,9 +6,9 @@
 # imports
 import numpy as np
 
-from josiann import psa
+from josiann.parallel import psa
 from josiann.parallel import ParallelArgument
-from josiann.moves.parallel.set import ParallelSetStep
+from josiann.parallel.moves.discrete import ParallelSetStep
 
 
 # ====================================================
@@ -30,7 +30,9 @@ def test_parallel_sa():
         np.array([[0, 0], [0, 0], [0, 0]]),
         parallel_args=[np.array([0, 1, 2])],
         bounds=[(-1, 1), (-1, 1)],
-        moves=ParallelSetStep(np.tile(np.linspace(-1, 1, 21), (2, 1))),
+        moves=ParallelSetStep(
+            position_set=[np.linspace(-1, 1, 21), np.linspace(-1, 1, 21)]
+        ),
         max_measures=1,
         max_iter=2000,
         backup=True,

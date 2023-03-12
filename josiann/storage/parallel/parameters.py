@@ -11,10 +11,10 @@ from warnings import warn
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
-from typing import TYPE_CHECKING
 
-from josiann.parallel.compute import get_vectorized_mean_cost
-from josiann.moves.parallel.base import ParallelMove, parse_moves
+import josiann.typing as jot
+from josiann.parallel.algorithms.compute import get_vectorized_mean_cost
+from josiann.parallel.moves.base import ParallelMove, parse_moves
 from josiann.backup.parallel.backup import ParallelBackup
 from josiann.storage.parameters import BaseParameters
 from josiann.storage.parameters import check_base_parameters_core
@@ -22,9 +22,6 @@ from josiann.storage.parameters import SAParameters
 from josiann.storage.parameters import check_bounds
 from josiann.storage.parameters import MoveParameters
 from josiann.storage.parameters import MultiParameters
-
-if TYPE_CHECKING:
-    import josiann.typing as jot
 
 
 # ====================================================

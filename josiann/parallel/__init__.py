@@ -1,11 +1,12 @@
 # coding: utf-8
-# Created on 15/06/2022 17:21
-# Author : matteo
 
 # ====================================================
 # imports
-from .arguments import ParallelArgument
+from josiann.parallel.algorithms.psa import psa
+from josiann.parallel.arguments import ParallelArgument
+from josiann.parallel.moves.discrete import ParallelSetStep
+
 
 # ====================================================
 # code
-__all__ = ["ParallelArgument"]
+__all__ = ["psa", "ParallelArgument", "ParallelSetStep"]

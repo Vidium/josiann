@@ -16,15 +16,12 @@ from warnings import warn
 import numpy.typing as npt
 from typing import Any
 from typing import Sequence
-from typing import TYPE_CHECKING
 
+import josiann.typing as jot
 from josiann.errors import ShapeError
 from josiann.moves.base import Move
-from josiann.moves.set import SetMove
+from josiann.moves.discrete import DiscreteMove
 from josiann.backup.backup import Backup
-
-if TYPE_CHECKING:
-    import josiann.typing as jot
 
 
 # ====================================================
@@ -92,7 +89,7 @@ class MoveParameters:
         """
         Is at least one of the moves a Set move ?
         """
-        return any([isinstance(move, SetMove) for move in self.list_moves])
+        return any([isinstance(move, DiscreteMove) for move in self.list_moves])
 
     def set_bounds(
         self, bounds: tuple[float, float] | Sequence[tuple[float, float]] | None

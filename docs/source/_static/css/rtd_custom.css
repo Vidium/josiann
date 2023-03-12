@@ -1,0 +1,57 @@
+*:not(i) {
+    font-family: Lato, sans-serif;
+}
+
+.icon-home img {
+    max-height: 100px;
+}
+
+/* large page size */
+.wy-nav-content {
+    max-width: 100%;
+    min-height: 100vh;
+}
+
+/* page title */
+div[itemprop="articleBody"] h1 {
+    background-color: #efefef;
+    padding: 0.2rem 0 0.2rem 2rem;
+    position:relative;
+}
+
+div[itemprop="articleBody"] h1:before {
+    content: "";
+    display: inline-block;
+    background-color: #2980b9;
+    width: 1rem;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+}
+
+/* line under h2 */
+div[itemprop="articleBody"] h2, div[itemprop="articleBody"] .caption-text {
+    border-bottom: solid medium;
+    width: 400px;
+    display: inline-block;
+    line-height: initial;
+}
+
+/* line under rubric */
+.rubric {
+    border-bottom: solid medium;
+    width: 200px;
+}
+
+/* code blocks */
+div[class^="highlight"] pre {
+    font-size: 14px;
+    word-spacing: 0.2rem;
+}
+
+.highlight {
+    background-color: #efefef;
+    color: #343131;
+    padding: 0.4rem !important;
+}
