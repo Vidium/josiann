@@ -90,6 +90,16 @@ html_theme = "sphinx_rtd_theme"
 html_static_path = ["_static"]
 html_logo = "_static/images/logo_light.png"
 
+html_context = dict(
+    display_github=True,  # Integrate GitHub
+    github_user="Vidium",  # Username
+    github_repo="josiann",  # Repo name
+    github_version="main",  # Version
+    conf_py_path="/docs/source/",  # Path in the checkout to the docs root
+)
+
+html_show_sphinx = False
+
 # custom css styles in _static/css/
 html_css_files = ["css/rtd_custom.css"]
 
