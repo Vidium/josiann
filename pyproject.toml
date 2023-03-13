@@ -43,7 +43,16 @@ classifiers = [
 [project.optional-dependencies]
 plot = ["plotly"]
 
+docs = [
+    "sphinx",
+    "sphinx-autodoc-typehints",
+    "nbsphinx",
+    "IPython",
+    "sphinx-rtd-theme"
+]
+
 [project.urls]
+Documentation = "https://josiann.readthedocs.io/"
 Source = "https://github.com/Vidium/josiann"
 
 [tool.setuptools.packages.find]
