@@ -57,9 +57,7 @@ Documentation = "https://josiann.readthedocs.io/"
 Source = "https://github.com/Vidium/josiann"
 
 [tool.setuptools.packages.find]
-exclude = [
-    "venv_josiann"
-]
+include = ["josiann*"]
 
 [tool.vulture]
 paths = ["josiann", "tests", "vulture_whitelist.py"]
