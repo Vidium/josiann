@@ -69,3 +69,6 @@ include = [
 
 [tool.vulture]
 paths = ["josiann", "tests", "vulture_whitelist.py"]
+
+[tool.ruff]
+line-length = 120
