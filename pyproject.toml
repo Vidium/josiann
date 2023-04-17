@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "josiann"
 description = "Simulated Annealing for noisy cost functions."
-version = "1.1.3rc1"
+version = "1.1.3rc2"
 requires-python = ">=3.8"
 license = {file = "LICENSE"}
 authors = [
@@ -64,7 +64,8 @@ include = [
     "josiann.storage",
     "josiann.storage.parallel",
     "josiann.backup",
-    "josiann.backup.parallel"
+    "josiann.backup.parallel",
+    "josiann.algorithms"
 ]
 
 [tool.vulture]
