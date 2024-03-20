@@ -1710,7 +1710,11 @@ files = [
     {file = "webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923"},
 ]
 
+[extras]
+docs = []
+plot = []
+
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "215c3bb1e0eb16999c00f066b8fbc2f9aef11f4a0752a90ab4a99f6bd5f3e441"
+content-hash = "10c29c5daa451d40175badae53e9beba1b4a61383c72dd00b2878913baaff8ca"

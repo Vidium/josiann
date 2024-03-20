@@ -40,6 +40,10 @@ ipython = "^8.22.2"
 sphinx-rtd-theme = "^2.0.0"
 
 
+[tool.poetry.extras]
+plot = ["plot"]
+docs = ["docs"]
+
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
 mypy = "^1.9.0"
