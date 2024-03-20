@@ -1,22 +1,17 @@
-# coding: utf-8
-
-# ====================================================
-# imports
 from __future__ import annotations
 
 import logging
-import numpy as np
 from pathlib import Path
-from tqdm.autonotebook import trange
+from typing import Any, Sequence
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Sequence
+from tqdm.autonotebook import trange
 
 from josiann.errors import ShapeError
 from josiann.storage.trace import Trace
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("josiann")
 
 PLOTTING_ENABLED = False
 
@@ -25,18 +20,13 @@ try:
     from plotly.subplots import make_subplots
 
 except ImportError:
-    logger.info(
-        "Plotly is not installed, consider installing it or running 'pip install josiann[plot]'."
-    )
+    logger.info("Plotly is not installed, consider installing it or running 'pip install josiann[plot]'.")
 
 else:
     PLOTTING_ENABLED = True
 
 
-# ====================================================
-# code
 class ParallelTrace(Trace):
-
     # region magic methods
     def __repr__(self) -> str:
         return (
@@ -73,21 +63,16 @@ class ParallelTrace(Trace):
                 raise ShapeError("The vector of true values should have 2 dimensions.")
             if true_values.shape != (self.nb_walkers, self.nb_dimensions):
                 raise ShapeError(
-                    f"The vector of true values should have {self.nb_walkers}x{self.nb_dimensions} "
-                    f"values."
+                    f"The vector of true values should have {self.nb_walkers}x{self.nb_dimensions} " f"values."
                 )
 
         if walker_titles is not None:
             if len(walker_titles) != self.nb_walkers:
-                raise ShapeError(
-                    f"Expected {self.nb_walkers} paralle_titles, got {len(walker_titles)}."
-                )
+                raise ShapeError(f"Expected {self.nb_walkers} paralle_titles, got {len(walker_titles)}.")
 
         if dimension_titles is not None:
             if len(dimension_titles) != self.nb_dimensions:
-                raise ShapeError(
-                    f"Expected {self.nb_dimensions} dimension_titles, got {len(dimension_titles)}."
-                )
+                raise ShapeError(f"Expected {self.nb_dimensions} dimension_titles, got {len(dimension_titles)}.")
 
         titles = (
             ["Costs"]
@@ -97,11 +82,7 @@ class ParallelTrace(Trace):
         )
 
         for i in range(self.nb_dimensions):
-            dimension_title = (
-                dimension_titles[i]
-                if dimension_titles is not None
-                else f"Dimensions #{i}"
-            )
+            dimension_title = dimension_titles[i] if dimension_titles is not None else f"Dimensions #{i}"
 
             if walker_titles is not None:
                 titles += [
@@ -111,14 +92,13 @@ class ParallelTrace(Trace):
 
             else:
                 titles += [
-                    f"{dimension_title}<br>(converged : {self.positions.converged[w]})"
-                    for w in range(self.nb_walkers)
+                    f"{dimension_title}<br>(converged : {self.positions.converged[w]})" for w in range(self.nb_walkers)
                 ]
 
         fig = make_subplots(
             rows=self.nb_dimensions + 2,
             cols=self.nb_walkers,
-            # shared_xaxes='all',
+            shared_xaxes=True,
             subplot_titles=titles,
             vertical_spacing=0.5 / (1.5 * (self.nb_dimensions + 2) - 0.5),
             horizontal_spacing=0,
@@ -134,12 +114,8 @@ class ParallelTrace(Trace):
                     name=f"Walker #{w}",
                     marker=dict(color="rgba(0, 0, 200, 0.3)"),
                     hovertext=[
-                        f"<b>Walker</b>: {w}<br>"
-                        f"<b>Cost</b>: {cost:.4f}<br>"
-                        f"<b>Iteration</b>: {iteration}"
-                        for iteration, cost in enumerate(
-                            self.positions.cost_trace[:, w]
-                        )
+                        f"<b>Walker</b>: {w}<br>" f"<b>Cost</b>: {cost:.4f}<br>" f"<b>Iteration</b>: {iteration}"
+                        for iteration, cost in enumerate(self.positions.cost_trace[:, w])
                     ],
                     hoverinfo="text",
                     showlegend=True,
@@ -156,11 +132,7 @@ class ParallelTrace(Trace):
             with np.errstate(divide="ignore", invalid="ignore"):
                 for it in range(self.positions.nb_iterations + 1):
                     best = self.positions.get_best(it - 1)
-                    best_costs[it] = (
-                        best.cost[w]
-                        * np.insert(self.parameters.n_trace, 0, 1)[it]
-                        / best.n[w]
-                    )
+                    best_costs[it] = best.cost[w] * np.insert(self.parameters.n_trace, 0, 1)[it] / best.n[w]
 
             fig.add_trace(
                 go.Scatter(
@@ -169,9 +141,7 @@ class ParallelTrace(Trace):
                     name="Best cost evolution",
                     marker=dict(color="rgba(252, 196, 25, 1.)"),
                     hovertext=[
-                        f"<b>Walker</b>: {w}<br>"
-                        f"<b>Cost</b>: {cost}<br>"
-                        f"<b>Iteration</b>: {iteration}"
+                        f"<b>Walker</b>: {w}<br>" f"<b>Cost</b>: {cost}<br>" f"<b>Iteration</b>: {iteration}"
                         for iteration, cost in enumerate(best_costs)
                     ],
                     hoverinfo="text",
@@ -183,12 +153,14 @@ class ParallelTrace(Trace):
 
             # -----------------------------------------------------------------
             # Dimensions
+            convergence_index = int(self.positions.converged_at_iteration[w]) if self.positions.converged[w] else -1
+
             for d in range(self.nb_dimensions):
                 # add exploration trace (blue)
                 fig.add_trace(
                     go.Scatter(
-                        x=list(range(self.positions.nb_iterations + 1)),
-                        y=self.positions.explored_trace[:, w, d],
+                        x=list(range(self.positions.nb_iterations + 1))[:convergence_index],
+                        y=self.positions.explored_trace[:convergence_index, w, d],
                         mode="markers",
                         marker=dict(
                             color=[
@@ -207,9 +179,7 @@ class ParallelTrace(Trace):
                             f"<b>Evaluations</b>: "
                             f"{np.insert(self.parameters.n_trace, 0, 1)[iteration]}<br>"
                             f"<b>Iteration</b>: {iteration}"
-                            for iteration, cost in enumerate(
-                                self.positions.explored_cost_trace[:, w]
-                            )
+                            for iteration, cost in enumerate(self.positions.explored_cost_trace[:, w])
                         ],
                         hoverinfo="text",
                         showlegend=d == 0,
@@ -222,8 +192,8 @@ class ParallelTrace(Trace):
                 # add position trace (grey)
                 fig.add_trace(
                     go.Scatter(
-                        x=list(range(self.positions.nb_iterations + 1)),
-                        y=self.positions.position_trace[:, w, d],
+                        x=list(range(self.positions.nb_iterations + 1))[:convergence_index],
+                        y=self.positions.position_trace[:convergence_index, w, d],
                         marker=dict(color="rgba(0, 0, 0, 0.3)"),
                         name=f"Walker #{w}",
                         hoverinfo="skip",
@@ -239,8 +209,8 @@ class ParallelTrace(Trace):
                 # add best points (gold)
                 fig.add_trace(
                     go.Scatter(
-                        x=list(range(self.positions.nb_iterations + 1)),
-                        y=self.positions.best_position_trace[:, w, d],
+                        x=list(range(self.positions.nb_iterations + 1))[:convergence_index],
+                        y=self.positions.best_position_trace[:convergence_index, w, d],
                         mode="markers",
                         marker=dict(color="rgba(252, 196, 25, 1.)", symbol=0, size=3),
                         name="Best cost",
@@ -249,9 +219,7 @@ class ParallelTrace(Trace):
                             f"<b>Cost</b>: "
                             f"{self.positions.best_position_trace[iteration, w, -2]:.4f}<br>"
                             f"<b>Iteration</b>: {iteration}"
-                            for iteration, position in enumerate(
-                                self.positions.best_position_trace[:, w, d]
-                            )
+                            for iteration, position in enumerate(self.positions.best_position_trace[:, w, d])
                         ],
                         hoverinfo="text",
                         showlegend=d == 0,
@@ -262,15 +230,15 @@ class ParallelTrace(Trace):
                 )
 
                 # add convergence line (red)
-                if self.positions.converged[w]:
+                if convergence_index > -1:
                     fig.add_shape(
                         go.layout.Shape(
                             type="line",
                             yref="paper",
                             xref="x",
-                            x0=self.positions.converged_at_iteration[w] + 1,
+                            x0=convergence_index + 1,
                             y0=0,
-                            x1=self.positions.converged_at_iteration[w] + 1,
+                            x1=convergence_index + 1,
                             y1=np.nanmax(self.positions.explored_trace[:, w, d]),
                             line=dict(color="firebrick", width=3),
                         ),
