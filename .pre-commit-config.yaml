@@ -1,15 +1,16 @@
-fail_fast: false
+fail_fast: true
 
 repos:
-  - repo: https://github.com/ambv/black
-    rev: 22.12.0
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.3.2
     hooks:
-      - id: black
-        language_version: python3.9
-        exclude: ^build/
+      - id: ruff
+        args: [--exclude, vulture_whitelist.py]
+      - id: ruff-format
+        args: [--exclude, vulture_whitelist.py]
 
   - repo: https://github.com/jendrikseipp/vulture
-    rev: v2.7
+    rev: v2.11
     hooks:
       - id: vulture
         types: [python]
@@ -17,20 +18,22 @@ repos:
         require_serial: true
 
   - repo: https://github.com/pycqa/pylint
-    rev: v2.15.8
+    rev: v3.1.0
     hooks:
       - id: pylint
         args: [--disable=all, --enable=unused-import]
-        language_version: python3.9
+        language_version: python3.10
 
   - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.0.1
+    rev: v1.9.0
     hooks:
       - id: mypy
         exclude: (^tests/)|(^docs/)|(^build/)|(vulture_whitelist.py)
-        args: [--strict]
+        args: [--strict, "josiann"]
+        pass_filenames: false
         additional_dependencies:
-          - "numpy==1.24"
-          - "attrs==22.2.0"
-          - "types-attrs==19.1.0"
-        language_version: python3.9
+          - "numpy"
+          - "attrs"
+          - "types-attrs"
+          - "types-tqdm"
+        language_version: python3.10

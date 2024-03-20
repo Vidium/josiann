@@ -1,30 +1,19 @@
-# coding: utf-8
-# Created on 13/01/2023 09:12
-# Author : matteo
-
 """Move functions that work on a discrete set of possible positions."""
 
-# ====================================================
-# imports
 from __future__ import annotations
 
-import numpy as np
 from abc import ABC
+from typing import Any, Optional, Sequence
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Sequence
-from typing import Optional
 
 import josiann.typing as jot
-from josiann.moves.base import Move
-from josiann.moves.base import State
-from josiann.moves.ensemble import Stretch
 from josiann.errors import ShapeError
+from josiann.moves.base import Move, State
+from josiann.moves.ensemble import Stretch
 
 
-# ====================================================
-# code
 class DiscreteMove(Move, ABC):
     """
     Base class for building moves that work on a discrete set of valid positions.
@@ -34,7 +23,7 @@ class DiscreteMove(Move, ABC):
     def __init__(
         self,
         *,
-        position_set: Sequence[Sequence[float]],
+        position_set: Sequence[Sequence[float] | npt.NDArray[np.floating[Any]]],
         bounds: Optional[npt.NDArray[jot.DType]] = None,
         repr_attributes: tuple[str, ...] = (),
         **kwargs: Any,
@@ -100,9 +89,7 @@ class SetStep(DiscreteMove):
     # endregion
 
     # region methods
-    def _get_proposal(
-        self, x: npt.NDArray[jot.DT_ARR], state: State
-    ) -> npt.NDArray[jot.DT_ARR]:
+    def _get_proposal(self, x: npt.NDArray[jot.DT_ARR], state: State) -> npt.NDArray[jot.DT_ARR]:
         """
         Generate a new proposed vector x.
 
@@ -118,18 +105,14 @@ class SetStep(DiscreteMove):
         if np.random.rand() > 0.5:
             mask = self._position_set[self._target_dim] > x[self._target_dim]
             if np.any(mask):
-                new_x[self._target_dim] = self._position_set[self._target_dim][
-                    np.argmax(mask)
-                ]
+                new_x[self._target_dim] = self._position_set[self._target_dim][np.argmax(mask)]
             else:
                 new_x[self._target_dim] = x[self._target_dim]
 
         else:
             mask = self._reversed_position_set[self._target_dim] < x[self._target_dim]
             if np.any(mask):
-                new_x[self._target_dim] = self._reversed_position_set[self._target_dim][
-                    np.argmax(mask)
-                ]
+                new_x[self._target_dim] = self._reversed_position_set[self._target_dim][np.argmax(mask)]
             else:
                 new_x[self._target_dim] = x[self._target_dim]
 
@@ -190,15 +173,11 @@ class SetStretch(DiscreteMove, Stretch):
             An array with the nearest values from <vector> in <array>.
         """
         for index, value in enumerate(vector):
-            vector[index] = self._position_set[index][
-                np.nanargmin(np.abs(self._position_set[index] - value))
-            ]
+            vector[index] = self._position_set[index][np.nanargmin(np.abs(self._position_set[index] - value))]
 
         return vector
 
-    def _get_proposal(
-        self, x: npt.NDArray[jot.DT_ARR], state: State
-    ) -> npt.NDArray[jot.DT_ARR]:
+    def _get_proposal(self, x: npt.NDArray[jot.DT_ARR], state: State) -> npt.NDArray[jot.DT_ARR]:
         """
         Generate a new proposed vector x.
 
@@ -210,9 +189,7 @@ class SetStretch(DiscreteMove, Stretch):
             New proposed vector x of shape (ndim,).
         """
         # pick X_j at random from the complementary set
-        x_j = state.complementary_set[
-            np.random.randint(0, len(state.complementary_set))
-        ]
+        x_j = state.complementary_set[np.random.randint(0, len(state.complementary_set))]
         # sample z
         r = state.iteration / state.max_iter
         a = (1.5 - self._a) * r + self._a

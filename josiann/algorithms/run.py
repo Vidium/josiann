@@ -1,35 +1,24 @@
-# coding: utf-8
-# Created on 23/07/2021 23:28
-# Author : matteo
-
 """
 Core Simulated Annealing function.
 """
 
-# ====================================================
-# imports
 from __future__ import annotations
 
 import time
 import traceback
-import numpy as np
-from tqdm.autonotebook import tqdm
-
-import numpy.typing as npt
 from typing import Any
 
-from josiann.compute import n
-from josiann.compute import T
-from josiann.compute import sigma
+import numpy as np
+import numpy.typing as npt
+from tqdm.autonotebook import tqdm
+
+from josiann.algorithms.map.typing import Execution
+from josiann.compute import T, n, sigma
 from josiann.storage.parameters import SAParameters
 from josiann.storage.result import Result
 from josiann.storage.trace import Trace
 
-from josiann.algorithms.map.typing import Execution
 
-
-# ====================================================
-# code
 def run_simulated_annealing(
     costs: npt.NDArray[np.float64],
     execution: Execution,
@@ -46,9 +35,7 @@ def run_simulated_annealing(
     for iteration in progress_bar:
         temperature = T(iteration, params.base.T_0, params.base.alpha)
         current_n = n(iteration, params.base)
-        current_sigma = sigma(
-            iteration, params.base.T_0, params.base.alpha, params.base.epsilon
-        )
+        current_sigma = sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon)
 
         accepted = np.zeros(params.multi.nb_walkers, dtype=bool)
         rescued = np.zeros(params.multi.nb_walkers, dtype=bool)
@@ -68,12 +55,7 @@ def run_simulated_annealing(
                 last_ns=last_ns,
                 iteration=iteration,
                 temperature=temperature,
-                **kwargs
-                | dict(
-                    acceptance=acceptance_fraction
-                    if acceptance_fraction is not np.nan
-                    else 1.0
-                ),
+                **kwargs | dict(acceptance=acceptance_fraction if acceptance_fraction is not np.nan else 1.0),
             )
 
             for _x, _cost, _accepted, _walker_index in updates:
@@ -88,21 +70,14 @@ def run_simulated_annealing(
                 explored_costs[_walker_index] = _cost
 
         except Exception:
-            message = (
-                f"Unexpected failure while evaluating cost function : \n"
-                f"{traceback.format_exc()}"
-            )
+            message = f"Unexpected failure while evaluating cost function : \n" f"{traceback.format_exc()}"
             success = False
             break
 
         elapsed = time.perf_counter() - start
 
-        trace.positions.store(
-            iteration, x, np.array(costs), current_n, accepted, explored, explored_costs
-        )
-        trace.parameters.store(
-            iteration, temperature, current_n, current_sigma, elapsed
-        )
+        trace.positions.store(iteration, x, np.array(costs), current_n, accepted, explored, explored_costs)
+        trace.parameters.store(iteration, temperature, current_n, current_sigma, elapsed)
 
         stuck_walkers = trace.positions.are_stuck(iteration)
         best = trace.positions.get_best(iteration)

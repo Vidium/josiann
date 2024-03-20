@@ -42,6 +42,8 @@ sphinx-rtd-theme = "^2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.1.1"
+mypy = "^1.9.0"
+types-tqdm = "^4.66.0.20240106"
 
 [tool.poetry.urls]
 Documentation = "https://josiann.readthedocs.io/"
@@ -60,3 +62,8 @@ extend-select = ["I"]
 
 [tool.mypy]
 strict = true
+
+
+[[tool.mypy.overrides]]
+module = ['plotly', 'plotly.*']
+ignore_missing_imports = true

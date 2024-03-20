@@ -1,31 +1,22 @@
-# coding: utf-8
-# Created on 03/02/2022 10:57
-# Author : matteo
-
-# ====================================================
-# imports
 from __future__ import annotations
 
-import numbers
 import collections.abc
-import numpy as np
+import numbers
 from abc import ABC
-from attrs import frozen
+from typing import Any, Sequence
 from warnings import warn
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Sequence
+from attrs import frozen
 
 import josiann.typing as jot
+from josiann.backup.backup import Backup
 from josiann.errors import ShapeError
 from josiann.moves.base import Move
 from josiann.moves.discrete import DiscreteMove
-from josiann.backup.backup import Backup
 
 
-# ====================================================
-# code
 @frozen(kw_only=True)
 class BaseParameters:
     """
@@ -91,9 +82,7 @@ class MoveParameters:
         """
         return any([isinstance(move, DiscreteMove) for move in self.list_moves])
 
-    def set_bounds(
-        self, bounds: tuple[float, float] | Sequence[tuple[float, float]] | None
-    ) -> None:
+    def set_bounds(self, bounds: tuple[float, float] | Sequence[tuple[float, float]] | None) -> None:
         """
         Set the bounds for all moves.
 
@@ -151,9 +140,7 @@ def check_base_parameters_core(
 
     # epsilon
     if epsilon <= 0 or epsilon >= 1:
-        raise ValueError(
-            f"Invalid value '{epsilon}' for 'epsilon', should be in (0, 1)."
-        )
+        raise ValueError(f"Invalid value '{epsilon}' for 'epsilon', should be in (0, 1).")
 
     # T 0
     if T_0 < 0:
@@ -170,9 +157,7 @@ def check_base_parameters_core(
 
     # suppress warnings
     if not suppress_warnings and max_iter < 200:
-        warn(
-            "It is not recommended running the SA algorithm with less than 200 iterations."
-        )
+        warn("It is not recommended running the SA algorithm with less than 200 iterations.")
 
     return (
         float(T_0),
@@ -225,9 +210,7 @@ def check_base_parameters(
     # initial values
     if x0.ndim == 1:
         if len(x0) > 1:
-            x0 = np.array(
-                [x0 + np.random.uniform(-0.5e-10, 0.5e-10) for _ in range(nb_walkers)]
-            )
+            x0 = np.array([x0 + np.random.uniform(-0.5e-10, 0.5e-10) for _ in range(nb_walkers)])
 
         else:
             x0 = np.array([x0])
@@ -241,9 +224,7 @@ def check_base_parameters(
     if len(x0) > 1 and np.all([x0[0] == x0[i] for i in range(1, len(x0))]):
         warn("Initial positions are the same for all walkers, adding random noise.")
 
-        x0 = np.array(
-            [x0[i] + np.random.uniform(-0.5e-10, 0.5e-10) for i in range(len(x0))]
-        )
+        x0 = np.array([x0[i] + np.random.uniform(-0.5e-10, 0.5e-10) for i in range(len(x0))])
 
     (
         T_0,
@@ -300,9 +281,7 @@ def check_bounds(
             and isinstance(bounds[1], numbers.Number)
         ):
             if np.any(x0 < bounds[0]) or np.any(x0 > bounds[1]):  # type: ignore[operator]
-                raise ValueError(
-                    "Some values in x0 do not lie in between defined bounds."
-                )
+                raise ValueError("Some values in x0 do not lie in between defined bounds.")
 
         elif isinstance(bounds, collections.abc.Sequence):
             if len(bounds) != x0.shape[1]:
@@ -317,12 +296,11 @@ def check_bounds(
                     and isinstance(bound[0], numbers.Number)
                     and isinstance(bound[1], numbers.Number)
                 ):
-                    if np.any(x0[:, dim_index] < bound[0]) or np.any(
-                        x0[:, dim_index] > bound[1]
+                    if np.any(x0[:, dim_index] < bound[0]) or np.any(  # type: ignore[operator]
+                        x0[:, dim_index] > bound[1]  # type: ignore[operator]
                     ):
                         raise ValueError(
-                            f"Some values in x0 do not lie in between defined bounds for dimensions "
-                            f"{dim_index}."
+                            f"Some values in x0 do not lie in between defined bounds for dimensions " f"{dim_index}."
                         )
 
                 else:

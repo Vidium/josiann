@@ -1,26 +1,14 @@
-# coding: utf-8
-
-# ====================================================
-# imports
 from __future__ import annotations
 
-import numpy as np
-from attrs import field
-from attrs import define
 from itertools import accumulate
+from typing import Any, Generator, Generic, Iterator, TypeVar
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import TypeVar
-from typing import Iterator
-from typing import Generator
+from attrs import define, field
 
-import josiann.typing as jot
-
-
-# ====================================================
-# code
 _T = TypeVar("_T")
+_DT = TypeVar("_DT", bound=np.generic)
 
 
 def pairwise(iterable: Iterator[_T]) -> Generator[tuple[_T, _T], None, None]:
@@ -35,7 +23,7 @@ def pairwise(iterable: Iterator[_T]) -> Generator[tuple[_T, _T], None, None]:
 
 
 @define
-class ParallelArgument:
+class ParallelArgument(Generic[_DT]):
     """
     Object passed to parallel cost functions which holds instructions on what should be computed.
 
@@ -45,12 +33,8 @@ class ParallelArgument:
         args: parallel arguments
     """
 
-    positions: npt.NDArray[
-        jot.DType
-    ]  #: matrix of position vectors at current iteration
-    nb_evaluations: npt.NDArray[
-        np.int_
-    ]  #: array indicating the number of evaluations to compute per position vector
+    positions: npt.NDArray[_DT]  #: matrix of position vectors at current iteration
+    nb_evaluations: npt.NDArray[np.int_]  #: array indicating the number of evaluations to compute per position vector
     args: tuple[npt.NDArray[Any], ...] = field(factory=tuple)  #: parallel arguments
     _result: npt.NDArray[np.float_] = field(init=False)
 
@@ -65,9 +49,7 @@ class ParallelArgument:
         """
         positions = np.repeat(self.positions, self.nb_evaluations, axis=0)
 
-        args = tuple(
-            np.repeat(arg, self.nb_evaluations)[:, np.newaxis] for arg in self.args
-        )
+        args = tuple(np.repeat(arg, self.nb_evaluations)[:, np.newaxis] for arg in self.args)
 
         return (positions,) + args
 

@@ -1,17 +1,11 @@
-# coding: utf-8
-
 """Discrete move functions designed to work with josiann's parallel mode."""
 
-# ====================================================
-# imports
 from __future__ import annotations
 
-import numpy as np
+from typing import Any, Optional, Sequence
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Optional
-from typing import Sequence
 
 import josiann.typing as jot
 from josiann.moves.base import State
@@ -19,8 +13,6 @@ from josiann.moves.discrete import DiscreteMove
 from josiann.parallel.moves.base import ParallelMove
 
 
-# ====================================================
-# code
 class ParallelSetStep(ParallelMove, DiscreteMove):
     """
     Step within a fixed set of possible values for x. For each dimension, the position immediately before or after x
@@ -31,7 +23,7 @@ class ParallelSetStep(ParallelMove, DiscreteMove):
     def __init__(
         self,
         *,
-        position_set: Sequence[Sequence[float]],
+        position_set: Sequence[Sequence[float] | npt.NDArray[np.floating[Any]]],
         bounds: Optional[npt.NDArray[jot.DType]] = None,
         repr_attributes: tuple[str, ...] = (),
         **kwargs: Any,
@@ -57,9 +49,7 @@ class ParallelSetStep(ParallelMove, DiscreteMove):
     # endregion
 
     # region methods
-    def _get_proposal(
-        self, x: npt.NDArray[jot.DT_ARR], state: State
-    ) -> npt.NDArray[jot.DT_ARR]:
+    def _get_proposal(self, x: npt.NDArray[jot.DT_ARR], state: State) -> npt.NDArray[jot.DT_ARR]:
         """
         Generate a new proposed vector x.
 
@@ -78,30 +68,19 @@ class ParallelSetStep(ParallelMove, DiscreteMove):
             if np.random.rand() > 0.5:
                 mask = self._position_set[self._target_dim] > x[index, self._target_dim]
                 if np.any(mask):
-                    new_x[index, self._target_dim] = self._position_set[
-                        self._target_dim
-                    ][np.argmax(mask)]
+                    new_x[index, self._target_dim] = self._position_set[self._target_dim][np.argmax(mask)]
                 # boundary hit : cannot go higher than the highest value --> go down instead
                 else:
-                    new_x[index, self._target_dim] = self._position_set[
-                        self._target_dim
-                    ][-2]
+                    new_x[index, self._target_dim] = self._position_set[self._target_dim][-2]
 
             # ... or decreases
             else:
-                mask = (
-                    self._reversed_position_set[self._target_dim]
-                    < x[index, self._target_dim]
-                )
+                mask = self._reversed_position_set[self._target_dim] < x[index, self._target_dim]
                 if np.any(mask):
-                    new_x[index, self._target_dim] = self._reversed_position_set[
-                        self._target_dim
-                    ][np.argmax(mask)]
+                    new_x[index, self._target_dim] = self._reversed_position_set[self._target_dim][np.argmax(mask)]
                 # boundary hit : cannot go lower than the lowest value --> go up instead
                 else:
-                    new_x[index, self._target_dim] = self._position_set[
-                        self._target_dim
-                    ][1]
+                    new_x[index, self._target_dim] = self._position_set[self._target_dim][1]
 
         # next time, update the position for the next dimension of the vector
         self._target_dim += 1
