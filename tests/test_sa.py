@@ -1,27 +1,14 @@
-# coding: utf-8
-# Created on 24/09/2021 14:33
-# Author : matteo
-
-# ====================================================
-# imports
-import numpy as np
-
 from typing import Callable
 
-from josiann import sa
-from josiann import Result
+import numpy as np
+
+from josiann import Result, sa
 from josiann.moves.base import Move
-from josiann.moves.sequential import RandomStep
-from josiann.moves.sequential import Metropolis
-from josiann.moves.sequential import Metropolis1D
-from josiann.moves.discrete import SetStep
-from josiann.moves.discrete import SetStretch
-from josiann.moves.ensemble import Stretch
-from josiann.moves.ensemble import StretchAdaptive
+from josiann.moves.discrete import SetStep, SetStretch
+from josiann.moves.ensemble import Stretch, StretchAdaptive
+from josiann.moves.sequential import Metropolis, Metropolis1D, RandomStep
 
 
-# ====================================================
-# code
 def run_sa(
     move: Move,
     cost_func: Callable,
@@ -34,12 +21,7 @@ def run_sa(
     seed = 42
     np.random.seed(seed)
 
-    x0 = np.array(
-        [
-            [np.random.randint(-3, 4), np.random.choice(np.linspace(0.5, 5, 10))]
-            for _ in range(nb_walkers)
-        ]
-    )
+    x0 = np.array([[np.random.randint(-3, 4), np.random.choice(np.linspace(0.5, 5, 10))] for _ in range(nb_walkers)])
 
     res = sa(
         cost_func,
@@ -49,7 +31,6 @@ def run_sa(
         nb_walkers=nb_walkers,
         max_iter=max_iter,
         max_measures=max_measures,
-        final_acceptance_probability=1e-300,
         epsilon=0.001,
         T_0=5,
         tol=1e-3,
@@ -64,9 +45,7 @@ def run_sa(
 
 # ONE walker ------------------------------------------------------------------
 def test_RandomStep(BOUNDS, cost_function):
-    res = run_sa(
-        RandomStep(magnitude=5, bounds=BOUNDS), cost_func=cost_function, BOUNDS=BOUNDS
-    )
+    res = run_sa(RandomStep(magnitude=5, bounds=BOUNDS), cost_func=cost_function, BOUNDS=BOUNDS)
 
     assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
 
@@ -108,9 +87,7 @@ def test_SetStep(BOUNDS, cost_function):
 
 # MULTIPLE walkers ------------------------------------------------------------
 def test_Stretch(BOUNDS, cost_function):
-    res = run_sa(
-        Stretch(bounds=BOUNDS), cost_func=cost_function, nb_walkers=5, BOUNDS=BOUNDS
-    )
+    res = run_sa(Stretch(bounds=BOUNDS), cost_func=cost_function, nb_walkers=5, BOUNDS=BOUNDS)
 
     assert np.allclose(res.trace.positions.get_best().x, [0, 0.5], atol=3e-1)
 

@@ -117,7 +117,6 @@ def restart(
     previous: Result,
     max_iter: int = 200,
     max_measures: int = 20,
-    final_acceptance_probability: float = 1e-300,
     epsilon: float = 0.01,
     T_0: float = 5.0,
     tol: float = 1e-3,

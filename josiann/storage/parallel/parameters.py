@@ -1,31 +1,26 @@
-# coding: utf-8
-
-# ====================================================
-# imports
 from __future__ import annotations
 
-import numpy as np
-from attrs import frozen
+from typing import Any, Sequence
 from warnings import warn
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Sequence
+from attrs import frozen
 
 import josiann.typing as jot
+from josiann.backup.parallel.backup import ParallelBackup
 from josiann.parallel.algorithms.compute import get_vectorized_mean_cost
 from josiann.parallel.moves.base import ParallelMove, parse_moves
-from josiann.backup.parallel.backup import ParallelBackup
-from josiann.storage.parameters import BaseParameters
-from josiann.storage.parameters import check_base_parameters_core
-from josiann.storage.parameters import SAParameters
-from josiann.storage.parameters import check_bounds
-from josiann.storage.parameters import MoveParameters
-from josiann.storage.parameters import MultiParameters
+from josiann.storage.parameters import (
+    BaseParameters,
+    MoveParameters,
+    MultiParameters,
+    SAParameters,
+    check_base_parameters_core,
+    check_bounds,
+)
 
 
-# ====================================================
-# code
 @frozen(kw_only=True)
 class ParallelBaseParameters(BaseParameters):
     """
@@ -54,7 +49,7 @@ def check_base_parameters(
     x0: npt.NDArray[Any],
     max_iter: int,
     max_measures: int,
-    final_acceptance_probability: float,
+    alpha: float,
     epsilon: float,
     T_0: float,
     tol: float,
@@ -73,6 +68,7 @@ def check_base_parameters(
         max_iter: the maximum number of iterations before stopping the algorithm.
         max_measures: the maximum number of function evaluations to average per step.
         final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        alpha: cooling coefficient,
         epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
             steeper descent profiles)
         T_0: initial temperature value.
@@ -92,24 +88,18 @@ def check_base_parameters(
     if parallel_args is not None:
         for array in parallel_args:
             if not isinstance(array, np.ndarray):
-                raise TypeError(
-                    "All arrays in the parallel arguments must be numpy arrays."
-                )
+                raise TypeError("All arrays in the parallel arguments must be numpy arrays.")
 
             if nb_parallel_problems is None:
                 nb_parallel_problems = len(array)
 
             elif nb_parallel_problems != len(array):
-                raise ValueError(
-                    "Arrays of different lengths were found in the parallel arguments."
-                )
+                raise ValueError("Arrays of different lengths were found in the parallel arguments.")
 
     # initial values
     if x0.ndim == 1:
         if nb_parallel_problems is None:
-            warn(
-                "Only one optimization problem has been defined, consider running the regular josiann.sa algorithm."
-            )
+            warn("Only one optimization problem has been defined, consider running the regular josiann.sa algorithm.")
             nb_parallel_problems = 1
 
         x0 = np.array([x0])
@@ -126,7 +116,7 @@ def check_base_parameters(
     T_0, alpha, max_iter, max_measures, sigma_max, x0 = check_base_parameters_core(
         T_0,
         epsilon,
-        final_acceptance_probability,
+        alpha,
         max_iter,
         max_measures,
         suppress_warnings,
@@ -136,14 +126,11 @@ def check_base_parameters(
     )
 
     return ParallelBaseParameters(
-        parallel_args=()
-        if parallel_args is None
-        else tuple(arg[:, np.newaxis] for arg in parallel_args),
+        parallel_args=() if parallel_args is None else tuple(arg[:, np.newaxis] for arg in parallel_args),
         args=args,
         x0=x0,
         max_iter=max_iter,
         max_measures=max_measures,
-        final_acceptance_probability=final_acceptance_probability,
         epsilon=epsilon,
         T_0=T_0,
         tol=tol,
@@ -160,7 +147,7 @@ def initialize_sa(
     x0: npt.NDArray[Any],
     max_iter: int,
     max_measures: int,
-    final_acceptance_probability: float,
+    alpha: float,
     epsilon: float,
     T_0: float,
     tol: float,
@@ -185,6 +172,7 @@ def initialize_sa(
         max_iter: the maximum number of iterations before stopping the algorithm.
         max_measures: the maximum number of function evaluations to average per step.
         final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        alpha: cooling coefficient.
         epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
             steeper descent profiles)
         T_0: initial temperature value.
@@ -222,7 +210,7 @@ def initialize_sa(
         x0,
         max_iter,
         max_measures,
-        final_acceptance_probability,
+        alpha,
         epsilon,
         T_0,
         tol,
@@ -259,9 +247,7 @@ def initialize_sa(
     # window size
     if window_size is not None:
         if max_iter < window_size < 1:
-            raise ValueError(
-                f"Invalid window size '{window_size}', should be in [{1}, {max_iter}]."
-            )
+            raise ValueError(f"Invalid window size '{window_size}', should be in [{1}, {max_iter}].")
 
     else:
         window_size = max(50, int(0.1 * max_iter))

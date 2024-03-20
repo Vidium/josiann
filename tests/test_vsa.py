@@ -1,23 +1,13 @@
-# coding: utf-8
-# Created on 04/12/2022 16:41
-# Author : matteo
-
-# ====================================================
-# imports
 from __future__ import annotations
+
+from typing import Any, Callable
 
 import numpy as np
 
-from typing import Any
-from typing import Callable
-
-from josiann import Result
-from josiann import vsa
+from josiann import Result, vsa
 from josiann.moves.base import Move
 from josiann.moves.discrete import SetStep
 
-# ====================================================
-# code
 BOUNDS = [(-3, 3), (0.5, 5)]
 
 
@@ -43,12 +33,7 @@ def run_vsa(
     seed = 42
     np.random.seed(seed)
 
-    x0 = np.array(
-        [
-            [np.random.randint(-3, 4), np.random.choice(np.linspace(0.5, 5, 10))]
-            for _ in range(nb_walkers)
-        ]
-    )
+    x0 = np.array([[np.random.randint(-3, 4), np.random.choice(np.linspace(0.5, 5, 10))] for _ in range(nb_walkers)])
 
     res = vsa(
         cost_func,
@@ -58,7 +43,6 @@ def run_vsa(
         nb_walkers=nb_walkers,
         max_iter=max_iter,
         max_measures=max_measures,
-        final_acceptance_probability=1e-300,
         epsilon=0.001,
         T_0=5,
         tol=1e-3,

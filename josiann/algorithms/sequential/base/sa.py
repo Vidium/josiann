@@ -1,33 +1,22 @@
-# coding: utf-8
-
-# ====================================================
-# imports
 from __future__ import annotations
 
 import time
-import numpy as np
-from tqdm.autonotebook import tqdm
-from tqdm.autonotebook import trange
+from typing import Any, Callable, Optional, Sequence, Union
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Union
-from typing import Optional
-from typing import Sequence
-from typing import Callable
+from tqdm.autonotebook import tqdm, trange
 
 import josiann.typing as jot
 from josiann.algorithms.map.linear import linear_execution
 from josiann.algorithms.run import run_simulated_annealing
-from josiann.storage.result import Result
-from josiann.storage.trace import OneTrace
 from josiann.algorithms.sequential.base.intialize import initialize_sa
 from josiann.moves.base import Move
 from josiann.moves.sequential import RandomStep
+from josiann.storage.result import Result
+from josiann.storage.trace import OneTrace
 
 
-# ====================================================
-# code
 def sa(
     fun: Callable[..., float],
     x0: npt.NDArray[Any],
@@ -40,7 +29,7 @@ def sa(
     nb_walkers: int = 1,
     max_iter: int = 200,
     max_measures: int = 20,
-    final_acceptance_probability: float = 1e-300,
+    alpha: float = 0.95,
     epsilon: float = 0.01,
     T_0: float = 5.0,
     tol: float = 1e-3,
@@ -73,7 +62,7 @@ def sa(
         nb_walkers: the number of parallel walkers in the ensemble.
         max_iter: the maximum number of iterations before stopping the algorithm.
         max_measures: the maximum number of function evaluations to average per step.
-        final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        alpha: cooling coefficient,
         epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
             steeper descent profiles)
         T_0: initial temperature value.
@@ -100,7 +89,7 @@ def sa(
         nb_walkers,
         max_iter,
         max_measures,
-        final_acceptance_probability,
+        alpha,
         epsilon,
         T_0,
         tol,

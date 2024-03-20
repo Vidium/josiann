@@ -1,35 +1,28 @@
-# coding: utf-8
-
-# ====================================================
-# imports
 from __future__ import annotations
 
+from typing import Any, Sequence
+
 import numpy as np
+import numpy.typing as npt
 from attrs import frozen
 
-import numpy.typing as npt
-from typing import Any
-from typing import Sequence
-
 import josiann.typing as jot
+from josiann.algorithms.sequential.vectorized.compute import (
+    get_evaluation_vectorized_mean_cost,
+    get_walker_vectorized_mean_cost,
+)
 from josiann.backup.backup import SequentialBackup
 from josiann.moves.base import Move
 from josiann.moves.parse import parse_moves
-from josiann.storage.parameters import MoveParameters
-from josiann.storage.parameters import MultiParameters
-from josiann.storage.parameters import SAParameters
-from josiann.storage.parameters import check_base_parameters
-from josiann.storage.parameters import check_bounds
-from josiann.algorithms.sequential.vectorized.compute import (
-    get_evaluation_vectorized_mean_cost,
-)
-from josiann.algorithms.sequential.vectorized.compute import (
-    get_walker_vectorized_mean_cost,
+from josiann.storage.parameters import (
+    MoveParameters,
+    MultiParameters,
+    SAParameters,
+    check_base_parameters,
+    check_bounds,
 )
 
 
-# ====================================================
-# code
 @frozen(kw_only=True)
 class VectorizedMultiParameters(MultiParameters):
     """
@@ -65,9 +58,7 @@ def _get_slots_per_walker(slots: int, nb_walkers: int) -> list[int]:
     """
     per_walker, plus_one = divmod(slots, nb_walkers)
 
-    return [per_walker + 1 for _ in range(plus_one)] + [
-        per_walker for _ in range(nb_walkers - plus_one)
-    ]
+    return [per_walker + 1 for _ in range(plus_one)] + [per_walker for _ in range(nb_walkers - plus_one)]
 
 
 def check_multi_parameters(
@@ -95,9 +86,7 @@ def check_multi_parameters(
         nb_slots_per_walker = [1 for _ in range(nb_walkers)]
 
     elif nb_slots < nb_walkers:
-        raise ValueError(
-            f"nb_slots ({nb_slots}) is less than the number of walkers ({nb_walkers})!"
-        )
+        raise ValueError(f"nb_slots ({nb_slots}) is less than the number of walkers ({nb_walkers})!")
 
     else:
         nb_slots_per_walker = _get_slots_per_walker(nb_slots, nb_walkers)
@@ -116,7 +105,7 @@ def initialize_vsa(
     nb_walkers: int,
     max_iter: int,
     max_measures: int,
-    final_acceptance_probability: float,
+    alpha: float,
     epsilon: float,
     T_0: float,
     tol: float,
@@ -142,7 +131,7 @@ def initialize_vsa(
         nb_walkers: the number of parallel walkers in the ensemble.
         max_iter: the maximum number of iterations before stopping the algorithm.
         max_measures: the maximum number of function evaluations to average per step.
-        final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        alpha: cooling coefficient.
         epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
             steeper descent profiles)
         T_0: initial temperature value.
@@ -185,7 +174,7 @@ def initialize_vsa(
         nb_walkers,
         max_iter,
         max_measures,
-        final_acceptance_probability,
+        alpha,
         epsilon,
         T_0,
         tol,
@@ -195,9 +184,7 @@ def initialize_vsa(
     )
 
     # multi parameters
-    multi_parameters = check_multi_parameters(
-        nb_walkers, vectorized_on_evaluations, vectorized_skip_marker, nb_slots
-    )
+    multi_parameters = check_multi_parameters(nb_walkers, vectorized_on_evaluations, vectorized_skip_marker, nb_slots)
 
     # bounds
     check_bounds(bounds, base_parameters.x0)
@@ -228,12 +215,7 @@ def initialize_vsa(
             1,
             base_parameters.args,
             [(0, 0.0) for _ in range(len(base_parameters.x0))]
-            + [
-                (max_iter, 0.0)
-                for _ in range(
-                    sum(multi_parameters.nb_slots_per_walker) - len(base_parameters.x0)
-                )
-            ],
+            + [(max_iter, 0.0) for _ in range(sum(multi_parameters.nb_slots_per_walker) - len(base_parameters.x0))],
             vectorized_skip_marker,
         )[0 : len(base_parameters.x0)]
 
@@ -242,9 +224,7 @@ def initialize_vsa(
     # window size
     if window_size is not None:
         if max_iter < window_size < 1:
-            raise ValueError(
-                f"Invalid window size '{window_size}', should be in [{1}, {max_iter}]."
-            )
+            raise ValueError(f"Invalid window size '{window_size}', should be in [{1}, {max_iter}].")
 
     else:
         # window_size = max(1, min(50, int(0.1 * max_iter)))

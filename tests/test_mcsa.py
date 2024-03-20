@@ -1,21 +1,12 @@
-# coding: utf-8
-# Created on 04/12/2022 17:56
-# Author : matteo
-
-# ====================================================
-# imports
-import numpy as np
-
 from typing import Callable
 
-from josiann import mcsa
-from josiann import Result
+import numpy as np
+
+from josiann import Result, mcsa
 from josiann.moves.base import Move
 from josiann.moves.ensemble import Stretch
 
 
-# ====================================================
-# code
 def run_sa(
     move: Move,
     cost_func: Callable,
@@ -29,12 +20,7 @@ def run_sa(
     seed = 42
     np.random.seed(seed)
 
-    x0 = np.array(
-        [
-            [np.random.randint(-3, 4), np.random.choice(np.linspace(0.5, 5, 10))]
-            for _ in range(nb_walkers)
-        ]
-    )
+    x0 = np.array([[np.random.randint(-3, 4), np.random.choice(np.linspace(0.5, 5, 10))] for _ in range(nb_walkers)])
 
     res = mcsa(
         cost_func,
@@ -44,7 +30,6 @@ def run_sa(
         nb_walkers=nb_walkers,
         max_iter=max_iter,
         max_measures=max_measures,
-        final_acceptance_probability=1e-300,
         epsilon=0.001,
         T_0=5,
         tol=1e-3,

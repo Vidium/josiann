@@ -1,32 +1,27 @@
-# coding: utf-8
-
-# ====================================================
-# imports
 from __future__ import annotations
 
-import numpy as np
-from attrs import frozen
 from multiprocessing import cpu_count
+from typing import Any, Sequence
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Sequence
+from attrs import frozen
 
 import josiann.typing as jot
-from josiann.moves.base import Move
-from josiann.moves.parse import parse_moves
+from josiann.algorithms.sequential.base.compute import get_mean_cost
 from josiann.backup.backup import SequentialBackup
 from josiann.backup.multicore import BackupManager
-from josiann.storage.parameters import SAParameters
-from josiann.storage.parameters import MultiParameters
-from josiann.storage.parameters import check_bounds
-from josiann.storage.parameters import check_base_parameters
-from josiann.storage.parameters import MoveParameters
-from josiann.algorithms.sequential.base.compute import get_mean_cost
+from josiann.moves.base import Move
+from josiann.moves.parse import parse_moves
+from josiann.storage.parameters import (
+    MoveParameters,
+    MultiParameters,
+    SAParameters,
+    check_base_parameters,
+    check_bounds,
+)
 
 
-# ====================================================
-# code
 @frozen(kw_only=True)
 class MulticoreMultiParameters(MultiParameters):
     """
@@ -48,9 +43,7 @@ class MulticoreSAParameters(SAParameters):
     backup: SequentialBackup
 
 
-def check_parallel_parameters(
-    nb_walkers: int, nb_cores: int, timeout: int | None
-) -> MulticoreMultiParameters:
+def check_parallel_parameters(nb_walkers: int, nb_cores: int, timeout: int | None) -> MulticoreMultiParameters:
     """
     Check validity of parallel parameters.
 
@@ -74,9 +67,7 @@ def check_parallel_parameters(
     if timeout is not None:
         timeout = int(timeout)
 
-    return MulticoreMultiParameters(
-        nb_walkers=nb_walkers, nb_cores=nb_cores, timeout=timeout
-    )
+    return MulticoreMultiParameters(nb_walkers=nb_walkers, nb_cores=nb_cores, timeout=timeout)
 
 
 def initialize_mcsa(
@@ -85,7 +76,7 @@ def initialize_mcsa(
     nb_walkers: int,
     max_iter: int,
     max_measures: int,
-    final_acceptance_probability: float,
+    alpha: float,
     epsilon: float,
     T_0: float,
     tol: float,
@@ -110,7 +101,7 @@ def initialize_mcsa(
         nb_walkers: the number of parallel walkers in the ensemble.
         max_iter: the maximum number of iterations before stopping the algorithm.
         max_measures: the maximum number of function evaluations to average per step.
-        final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        alpha: cooling coefficient.
         epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
             steeper descent profiles)
         T_0: initial temperature value.
@@ -150,7 +141,7 @@ def initialize_mcsa(
         nb_walkers,
         max_iter,
         max_measures,
-        final_acceptance_probability,
+        alpha,
         epsilon,
         T_0,
         tol,
@@ -178,10 +169,7 @@ def initialize_mcsa(
 
     # initial costs and last_ns
     costs = np.array(
-        [
-            get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.0))
-            for x_vector in base_parameters.x0
-        ]
+        [get_mean_cost(fun, x_vector, 1, base_parameters.args, (0, 0.0)) for x_vector in base_parameters.x0]
     )
 
     last_ns = [1 for _ in range(nb_walkers)]
@@ -189,9 +177,7 @@ def initialize_mcsa(
     # window size
     if window_size is not None:
         if max_iter < window_size < 1:
-            raise ValueError(
-                f"Invalid window size '{window_size}', should be in [{1}, {max_iter}]."
-            )
+            raise ValueError(f"Invalid window size '{window_size}', should be in [{1}, {max_iter}].")
 
     else:
         window_size = max(50, int(0.1 * max_iter))

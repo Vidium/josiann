@@ -1,49 +1,35 @@
-# coding: utf-8
-
-# ====================================================
-# imports
 from __future__ import annotations
 
 import time
 import traceback
-import numpy as np
-from tqdm.autonotebook import tqdm
-from tqdm.autonotebook import trange
+from typing import Any, Callable, Optional, Sequence, Union
 
+import numpy as np
 import numpy.typing as npt
-from typing import Any
-from typing import Union
-from typing import Sequence
-from typing import Callable
-from typing import Optional
+from tqdm.autonotebook import tqdm, trange
 
 import josiann.typing as jot
-from josiann.compute import n, T, sigma
-from josiann.parallel.algorithms.mappers import UpdateState
-from josiann.parallel.algorithms.mappers import vectorized_execution
+from josiann.compute import T, n, sigma
+from josiann.parallel.algorithms.mappers import UpdateState, vectorized_execution
+from josiann.parallel.moves.base import ParallelMove
+from josiann.parallel.moves.discrete import ParallelSetStep
 from josiann.storage.parallel.parameters import initialize_sa
 from josiann.storage.parallel.trace import ParallelTrace
 from josiann.storage.result import Result
-from josiann.parallel.moves.base import ParallelMove
-from josiann.parallel.moves.discrete import ParallelSetStep
 
 
-# ====================================================
-# code
 def psa(
     fun: Callable[..., None],
     x0: npt.NDArray[Any],
     parallel_args: Optional[Sequence[npt.NDArray[Any]]] = None,
     args: Optional[tuple[Any, ...]] = None,
     bounds: Optional[Sequence[tuple[float, float]]] = None,
-    moves: Union[
-        ParallelMove, Sequence[ParallelMove], Sequence[tuple[float, ParallelMove]]
-    ] = ParallelSetStep(
+    moves: Union[ParallelMove, Sequence[ParallelMove], Sequence[tuple[float, ParallelMove]]] = ParallelSetStep(
         position_set=[list(np.arange(-1, 1.1, 0.1)), list(np.arange(-1, 1.1, 0.1))]
     ),
     max_iter: int = 200,
     max_measures: int = 20,
-    final_acceptance_probability: float = 1e-300,
+    alpha: float = 0.95,
     epsilon: float = 0.01,
     T_0: float = 5.0,
     tol: float = 1e-3,
@@ -77,7 +63,7 @@ def psa(
                 each step.
         max_iter: the maximum number of iterations before stopping the algorithm.
         max_measures: the maximum number of function evaluations to average per step.
-        final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        alpha: cooling coefficient.
         epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
             steeper descent profiles)
         T_0: initial temperature value.
@@ -113,7 +99,7 @@ def psa(
         x0,
         max_iter,
         max_measures,
-        final_acceptance_probability,
+        alpha,
         epsilon,
         T_0,
         tol,
@@ -144,9 +130,7 @@ def psa(
 
     progress_bar: range | tqdm[int]
     if verbose:
-        progress_bar = trange(
-            params.base.max_iter, unit="iteration", leave=leave_progress_bar
-        )
+        progress_bar = trange(params.base.max_iter, unit="iteration", leave=leave_progress_bar)
     else:
         progress_bar = range(params.base.max_iter)
 
@@ -156,9 +140,7 @@ def psa(
     for iteration in progress_bar:
         temperature = T(iteration, params.base.T_0, params.base.alpha)
         current_n = n(iteration, params.base)
-        current_sigma = sigma(
-            iteration, params.base.T_0, params.base.alpha, params.base.epsilon
-        )
+        current_sigma = sigma(iteration, params.base.T_0, params.base.alpha, params.base.epsilon)
 
         accepted = np.zeros(params.multi.nb_walkers, dtype=bool)
         explored = np.zeros((params.multi.nb_walkers, params.base.nb_dimensions))
@@ -196,21 +178,14 @@ def psa(
                     explored_costs[_walker_index] = _cost
 
         except Exception:
-            message = (
-                f"Unexpected failure while evaluating cost function : \n"
-                f"{traceback.format_exc()}"
-            )
+            message = f"Unexpected failure while evaluating cost function : \n" f"{traceback.format_exc()}"
             success = False
             break
 
         elapsed = time.perf_counter() - start
 
-        trace.positions.store(
-            iteration, x, np.array(costs), current_n, accepted, explored, explored_costs
-        )
-        trace.parameters.store(
-            iteration, temperature, current_n, current_sigma, elapsed
-        )
+        trace.positions.store(iteration, x, np.array(costs), current_n, accepted, explored, explored_costs)
+        trace.parameters.store(iteration, temperature, current_n, current_sigma, elapsed)
 
         if isinstance(progress_bar, tqdm):
             progress_bar.set_description(

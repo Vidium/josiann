@@ -27,7 +27,6 @@ class BaseParameters:
     x0: npt.NDArray[Any]
     max_iter: int
     max_measures: int
-    final_acceptance_probability: float
     epsilon: float
     T_0: float
     tol: float
@@ -115,7 +114,7 @@ class SAParameters(ABC):
 def check_base_parameters_core(
     T_0: float,
     epsilon: float,
-    final_acceptance_probability: float,
+    alpha: float,
     max_iter: int,
     max_measures: int,
     suppress_warnings: bool,
@@ -131,12 +130,9 @@ def check_base_parameters_core(
     if max_measures < 0:
         raise ValueError("'max_measures' parameter must be positive.")
 
-    # final acceptance probability
-    if final_acceptance_probability < 0 or final_acceptance_probability > 1:
-        raise ValueError(
-            f"Invalid value '{final_acceptance_probability}' for 'final_acceptance_probability', "
-            f"should be in [0, 1]."
-        )
+    # alpha
+    if alpha is not None and (alpha < 0 or alpha > 1):
+        raise ValueError(f"Invalid value '{alpha}' for 'alpha', should be in [0, 1].")
 
     # epsilon
     if epsilon <= 0 or epsilon >= 1:
@@ -151,8 +147,6 @@ def check_base_parameters_core(
         raise ValueError("'tol' parameter must be strictly positive.")
 
     # max sigma
-    T_final = -1 / np.log(final_acceptance_probability)
-    alpha = (T_final / T_0) ** (1 / max_iter)
     sigma_max = np.sqrt((max_measures - 1) * T_0 * alpha * (1 - epsilon)) / 3
 
     # suppress warnings
@@ -175,7 +169,7 @@ def check_base_parameters(
     nb_walkers: int,
     max_iter: int,
     max_measures: int,
-    final_acceptance_probability: float,
+    alpha: float,
     epsilon: float,
     T_0: float,
     tol: float,
@@ -193,6 +187,7 @@ def check_base_parameters(
         max_iter: the maximum number of iterations before stopping the algorithm.
         max_measures: the maximum number of function evaluations to average per step.
         final_acceptance_probability: the targeted final acceptance probability at iteration <max_iter>.
+        alpha: cooling coefficient.
         epsilon: parameter in (0, 1) for controlling the rate of standard deviation decrease (bigger values yield
             steeper descent profiles)
         T_0: initial temperature value.
@@ -236,7 +231,7 @@ def check_base_parameters(
     ) = check_base_parameters_core(
         T_0,
         epsilon,
-        final_acceptance_probability,
+        alpha,
         max_iter,
         max_measures,
         suppress_warnings,
@@ -250,7 +245,6 @@ def check_base_parameters(
         x0=x0_casted,
         max_iter=max_iter,
         max_measures=max_measures,
-        final_acceptance_probability=final_acceptance_probability,
         epsilon=epsilon,
         T_0=T_0,
         tol=tol,
