@@ -1,10 +1,10 @@
-[tool.poetry]
+[project]
 name = "josiann"
-version = "1.1.9"
+version = "1.2.0"
 description = "Simulated Annealing for noisy cost function"
-authors = ["Matteo Bouvier <m.bouvier@vidium-solutions.com>"]
+authors = [{name="Matteo Bouvier", email="<matteo.bouvier@hotmail.fr>"}]
 readme = "README.md"
-license = "LICENSE"
+license = { file="LICENSE"}
 keywords = ["simulated annealing", "optimization", "noisy"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -20,53 +20,65 @@ classifiers = [
     "Topic :: Utilities",
     "Typing :: Typed",
 ]
-
-[tool.poetry.dependencies]
-python = "^3.10"
-numpy = "^1.26.4"
-attrs = "^23.2.0"
-tqdm = "^4.66.2"
-plotly = { version = "^5.20.0", optional = true }
-sphinx = { version = "^7.2.6", optional = true }
-sphinx-autodoc-typehints = { version = "^2.0.0", optional = true }
-nbsphinx = { version = "^0.9.3", optional = true }
-ipython = { version = "^8.22.2", optional = true }
-sphinx-rtd-theme = { version = "^2.0.0", optional = true }
-
-[tool.poetry.group.dev.dependencies]
-pytest = "^8.1.1"
-mypy = "^1.9.0"
-types-tqdm = "^4.66.0.20240106"
-
-[tool.poetry.extras]
-plot = ["plotly"]
-docs = [
-    "sphinx",
-    "sphinx-autodoc-typehints",
-    "nbsphinx",
-    "ipython",
-    "sphinx-rtd-theme",
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26.4",
+    "attrs>=23.2.0",
+    "tqdm>=4.66.2"
 ]
 
-[tool.poetry.urls]
+[project.urls]
 Documentation = "https://josiann.readthedocs.io/"
 Source = "https://github.com/Vidium/josiann"
 
+[project.optional-dependencies]
+plot = [
+    "plotly>=5.20.0"
+]
+docs = [
+    "sphinx>=7.2.6",
+    "sphinx-autodoc-typehints>=2.0.0",
+    "nbsphinx>=0.9.3",
+    "ipython>=8.22.2",
+    "sphinx-rtd-theme>=2.0.0"
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.1.1",
+    "mypy>=1.9.0",
+    "types-tqdm>=4.66.0.20240106",
+    "pre-commit>=4.2.0",
+    "vulture>=2.14",
+]
+
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.7.19,<0.8.0"]
+build-backend = "uv_build"
 
 [tool.vulture]
-paths = ["josiann", "tests", "vulture_whitelist.py"]
+paths = ["src/josiann", "tests", "vulture_whitelist.py"]
 
 [tool.ruff]
 line-length = 120
+
+[tool.ruff.lint]
 extend-select = ["I"]
 
 [tool.mypy]
 strict = true
-
+check_untyped_defs = true
+disallow_untyped_defs = true
+warn_unused_ignores = true
 
 [[tool.mypy.overrides]]
-module = ['plotly', 'plotly.*']
+module = ['plotly', 'plotly.*', 'tqdm.autonotebook']
 ignore_missing_imports = true
+
+[tool.pyright]
+reportAny = false
+reportExplicitAny = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnusedCallResult = false
+reportMissingTypeStubs = false

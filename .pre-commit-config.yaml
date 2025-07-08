@@ -1,13 +1,30 @@
 fail_fast: true
 
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.3.2
+  - repo: local
     hooks:
-      - id: ruff
-        args: [--exclude, vulture_whitelist.py]
+    - id: pytest
+      name: pytest
+      entry: uv run pytest tests
+      language: system
+      types: [python]
+      pass_filenames: false
+      always_run: true
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    # Ruff version.
+    rev: v0.11.13
+    hooks:
+      # Run the linter.
+      - id: ruff-check
+        name: ruff fix
+        args: [ --fix, --output-format, concise, --exclude, vulture_whitelist.py ]
+      # Fix old typing and syntax
+      - id: ruff-check
+        name: ruff update
+        args: [ --fix, --select, "UP,F401", --output-format, concise, --exclude, vulture_whitelist.py ]
+      # Run the formatter.
       - id: ruff-format
-        args: [--exclude, vulture_whitelist.py]
 
   - repo: https://github.com/jendrikseipp/vulture
     rev: v2.11
@@ -17,23 +34,15 @@ repos:
         pass_filenames: false
         require_serial: true
 
-  - repo: https://github.com/pycqa/pylint
-    rev: v3.1.0
-    hooks:
-      - id: pylint
-        args: [--disable=all, --enable=unused-import]
-        language_version: python3.10
-
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.9.0
     hooks:
       - id: mypy
         exclude: (^tests/)|(^docs/)|(^build/)|(vulture_whitelist.py)
-        args: [--strict, "josiann"]
+        args: [--strict, "src/josiann"]
         pass_filenames: false
         additional_dependencies:
           - "numpy"
           - "attrs"
           - "types-attrs"
           - "types-tqdm"
-        language_version: python3.10

@@ -1,4 +1,4 @@
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 
@@ -116,5 +116,5 @@ def test_SetStretch(BOUNDS, cost_function):
 
     x = res.trace.positions.get_best().x
 
-    assert np.all(np.in1d(x[:, 0], [-0.25, 0, 0.25]))
-    assert np.all(np.in1d(x[:, 1], [0.5, 0.75]))
+    assert np.all(np.isin(x[:, 0], [-0.25, 0, 0.25]))
+    assert np.all(np.isin(x[:, 1], [0.5, 0.75]))
